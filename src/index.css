@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply m-0 p-0 overflow-hidden select-none touch-none;
+    background: radial-gradient(circle at center, #fdfbf7, #e2d1c3);
+    font-family: 'Fredoka', sans-serif;
+  }
+}

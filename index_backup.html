@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zen Bingo Drop: Glossy Edition</title>
+    <style>
+        /* --- FONTS & VARS --- */
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-grad-start: #fdfbf7;
+            --bg-grad-end: #e2d1c3;
+
+            --glass-bg: rgba(255, 255, 255, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.9);
+            --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+
+            --accent-blue: #00bcd4;
+            --accent-pink: #e91e63;
+            --accent-gold: #ffc107;
+            --accent-green: #8bc34a;
+
+            --peg-color: #795548;
+            --text-dark: #3e2723;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, var(--bg-grad-start), var(--bg-grad-end));
+            font-family: 'Fredoka', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.1);
+        }
+
+        /* --- HEADER / HUD --- */
+        #hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 1.2rem;
+            color: var(--text-dark);
+            font-weight: 700;
+            background: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .icon-coin {
+            color: var(--accent-gold);
+        }
+
+        .icon-ball {
+            color: var(--accent-pink);
+        }
+
+        /* --- SLOT MACHINE HEADER --- */
+        #slot-section {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            padding: 5px 10px;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.4);
+            border-bottom: 2px solid white;
+        }
+
+        .slot-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .slot-column:active {
+            transform: scale(0.95);
+        }
+
+        .slot-header {
+            font-size: 1rem;
+            color: var(--text-dark);
+            opacity: 0.6;
+            margin-bottom: 2px;
+        }
+
+        .slot-display {
+            width: 100%;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #ffffff, #f0f0f0);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            box-shadow:
+                inset 2px 2px 5px rgba(255, 255, 255, 1),
+                inset -2px -2px 5px rgba(0, 0, 0, 0.1),
+                0 4px 5px rgba(0, 0, 0, 0.1);
+            border: 2px solid white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slot-display.highlight {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 10px var(--accent-gold);
+        }
+
+        .slot-arrow {
+            font-size: 0.8rem;
+            color: var(--accent-pink);
+            margin-top: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .slot-column:hover .slot-arrow,
+        .slot-column.active .slot-arrow {
+            opacity: 1;
+        }
+
+        /* --- PLINKO AREA --- */
+        #plinko-container {
+            flex: 1.5;
+            position: relative;
+            overflow: hidden;
+            /* Background pattern */
+            /* background-image: radial-gradient(circle, #ddd 1px, transparent 1px); background-size: 20px 20px; */
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* --- BINGO AREA --- */
+        #bingo-section {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid white;
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #bingo-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            padding: 5px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            border: 2px solid white;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+            aspect-ratio: 1;
+            /* keep square */
+        }
+
+        .bingo-cell {
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #555;
+            box-shadow: 3px 3px 6px #bebebe, -3px -3px 6px #ffffff;
+            position: relative;
+        }
+
+        .bingo-cell.marked {
+            background: linear-gradient(145deg, var(--accent-pink), #c2185b);
+            color: white;
+            box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.2);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            transform: scale(0.95);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .bingo-cell.marked::after {
+            content: '';
+            /* Glossy shine */
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 30%;
+            height: 30%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8), transparent);
+            border-radius: 50%;
+        }
+
+        .bingo-cell.free {
+            background: linear-gradient(145deg, var(--accent-blue), #1976d2);
+            color: white;
+        }
+
+        /* --- SHOP / FOOTER --- */
+        /* #shop-toggle removed */
+
+        /* --- OVERLAYS --- */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+        }
+
+        .modal-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            width: 80%;
+            max-width: 350px;
+            text-align: center;
+            color: var(--text-dark);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .shop-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Physics Canvas sits inside plinko-container */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+
+<body>
+
+    <div id="app-container">
+        <!-- INFO HUD -->
+        <div id="hud-top">
+            <div class="hud-item"><span class="icon-coin">●</span> <span id="coin-count">0</span></div>
+            <div class="hud-item" onclick="toggleShop()" style="cursor: pointer;">🛒</div>
+            <div class="hud-item"><span class="icon-ball">●</span> <span id="ball-count">50</span></div>
+            <div class="hud-item" id="level-display">Level 1</div>
+        </div>
+
+        <!-- PRE-DRAW SLOTS -->
+        <div id="slot-section">
+            <!-- Generated by JS -->
+        </div>
+
+        <!-- PHYSICS GAME -->
+        <div id="plinko-container">
+            <!-- Canvas injected here -->
+        </div>
+
+        <!-- BINGO CARD -->
+        <div id="bingo-section">
+            <div id="bingo-grid"></div>
+        </div>
+
+        <!-- SHOP BUTTON (Moved to HUD) -->
+    </div>
+
+    <!-- SHOP OVERLAY -->
+    <div id="shop-overlay" class="overlay">
+        <div class="modal-card">
+            <h2>Item Shop</h2>
+            <div class="shop-item">
+                <div>
+                    <strong>Fireball</strong><br>
+                    <small>Goes straight down</small>
+                </div>
+                <button class="btn-primary" onclick="buyItem('fireball', 100)">100 🟡</button>
+            </div>
+            <div class="shop-item">
+                <div>
+                    <strong>+5 Balls</strong><br>
+                    <small>Extend game</small>
+                </div>
+                <button class="btn-primary" onclick="buyItem('balls', 500)">500 🟡</button>
+            </div>
+            <button class="btn-primary" style="background:#888" onclick="toggleShop()">Close</button>
+        </div>
+    </div>
+
+    <!-- WIN/LOSS OVERLAY -->
+    <div id="game-end-overlay" class="overlay">
+        <div class="modal-card">
+            <h1 id="end-title">WINNER!</h1>
+            <p id="end-msg">Blackout!</p>
+            <button class="btn-primary" onclick="nextLevel()">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ZEN BINGO DROP - GLOSSY EDITION
+         * Single File Prototype
+         */
+
+        // --- CONFIG ---
+        const COLS = ['B', 'I', 'N', 'G', 'O'];
+        const RANGES = { 'B': [1, 15], 'I': [16, 30], 'N': [31, 45], 'G': [46, 60], 'O': [61, 75] };
+        const COLORS = {
+            B: '#e57373', I: '#ba68c8', N: '#64b5f6', G: '#81c784', O: '#ffb74d',
+            peg: '#795548',
+            ball: '#e91e63',
+            fireball: '#ff5722'
+        };
+
+        // --- STATE ---
+        let state = {
+            coins: 0,
+            balls: 50,
+            level: 1,
+            bingoCard: [], // {id, col, row, num, marked}
+            markedIndices: new Set(),
+            activeSlots: [0, 0, 0, 0, 0], // The current pre-draw numbers
+            inventory: {
+                fireball: 0
+            },
+            isGameOver: false,
+            combo: 0
+        };
+
+        // --- MATTER JS ALIASES ---
+        const { Engine, Render, Runner, Bodies, Composite, Body, Events, Vector } = Matter;
+        let engine, render, canvasPixelWidth, canvasPixelHeight;
+
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            try {
+                initGame();
+            } catch (e) {
+                alert("Game crashed: " + e.message);
+                console.error(e);
+            }
+        };
+
+        window.onerror = function (msg, url, line, col, error) {
+            alert("Error: " + msg + "\nLine: " + line);
+            return false;
+        };
+
+        function initGame() {
+            loadState();
+            renderBingoBoard();
+            spinSlots();
+            initPhysics();
+            updateUI();
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('zenBingoState');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state.coins = parsed.coins || 0;
+                    state.balls = (parsed.balls !== undefined) ? parsed.balls : 50;
+                    state.level = parsed.level || 1;
+                } catch (e) {
+                    console.log("Save file corrupted, resetting.");
+                }
+            }
+        }
+
+        function saveGame() {
+            localStorage.setItem('zenBingoState', JSON.stringify({
+                coins: state.coins,
+                balls: state.balls,
+                level: state.level
+            }));
+        }
+
+        // --- BINGO LOGIC ---
+        function renderBingoBoard() {
+            // Generate Card Logic
+            state.bingoCard = [];
+            state.markedIndices.clear();
+            const gridEl = document.getElementById('bingo-grid');
+            gridEl.innerHTML = '';
+
+            for (let c = 0; c < 5; c++) {
+                let nums = getUniqueRandoms(RANGES[COLS[c]][0], RANGES[COLS[c]][1], 5);
+                for (let r = 0; r < 5; r++) {
+                    let isFree = (c === 2 && r === 2);
+                    let num = isFree ? 'FREE' : nums[r];
+                    let cell = {
+                        id: `cell-${c}-${r}`,
+                        col: c,
+                        row: r,
+                        num: num,
+                        marked: isFree
+                    };
+                    if (isFree) state.markedIndices.add(cell.id);
+                    state.bingoCard.push(cell);
+
+                    // DOM Creation
+                    let div = document.createElement('div');
+                    div.className = `bingo-cell ${isFree ? 'free marked' : ''}`;
+                    div.id = cell.id;
+                    div.innerText = num === 'FREE' ? '★' : num;
+                    gridEl.appendChild(div);
+                }
+            }
+        }
+
+        function getUniqueRandoms(min, max, count) {
+            let arr = [];
+            while (arr.length < count) {
+                let r = Math.floor(Math.random() * (max - min + 1)) + min;
+                if (!arr.includes(r)) arr.push(r);
+            }
+            return arr;
+        }
+
+        // --- PRE-DRAW SLOT LOGIC ---
+        async function spinSlots() {
+            if (state.isGameOver) return;
+
+            // Slot Animation UI
+            const slotContainer = document.getElementById('slot-section');
+            slotContainer.innerHTML = '';
+
+            // Create UI Structure
+            for (let i = 0; i < 5; i++) {
+                const colDiv = document.createElement('div');
+                colDiv.className = 'slot-column';
+                colDiv.onclick = () => handleColumnClick(i);
+
+                colDiv.innerHTML = `
+            <div class="slot-header">${COLS[i]}</div>
+            <div class="slot-display" id="slot-disp-${i}">?</div>
+            <div class="slot-arrow">▼</div>
+        `;
+                slotContainer.appendChild(colDiv);
+            }
+
+            // Logic: Ensure at least one hit
+            // 1. Find all unmarked numbers on board
+            const needed = state.bingoCard.filter(c => !c.marked && c.num !== 'FREE');
+            if (needed.length === 0) return; // Full board?
+
+            // 2. Pick one guaranteed hit
+            const guaranteed = needed[Math.floor(Math.random() * needed.length)];
+
+            // 3. Generate others randomly
+            const newSlots = [];
+            for (let c = 0; c < 5; c++) {
+                if (c === guaranteed.col) {
+                    newSlots[c] = guaranteed.num;
+                } else {
+                    // Random for this col
+                    const range = RANGES[COLS[c]];
+                    newSlots[c] = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
+                }
+            }
+            state.activeSlots = newSlots;
+
+            // Animate Reveal
+            for (let i = 0; i < 5; i++) {
+                const el = document.getElementById(`slot-disp-${i}`);
+                // Simple "spin" effect
+                let counter = 0;
+                const interval = setInterval(() => {
+                    el.innerText = Math.floor(Math.random() * 99);
+                    counter++;
+                    if (counter > 10 + i * 2) {
+                        clearInterval(interval);
+                        el.innerText = state.activeSlots[i];
+                        // Highlight if useful
+                        const isUseful = state.bingoCard.some(c => c.col === i && c.num === state.activeSlots[i] && !c.marked);
+                        if (isUseful) el.classList.add('highlight');
+                    }
+                }, 50);
+            }
+        }
+
+        function handleColumnClick(colIndex) {
+            if (state.balls <= 0 || state.isGameOver) return;
+
+            // Drop Ball Logic
+            dropBall(colIndex, state.activeSlots[colIndex]);
+
+            // Deduct Ball
+            state.balls--;
+            updateUI();
+
+            if (state.balls <= 0) checkGameOver();
+
+            // Re-spin slots after drop (delayed)
+            setTimeout(() => spinSlots(), 2000);
+        }
+
+        // --- PHYSICS ENGINE ---
+        function initPhysics() {
+            const section = document.getElementById('plinko-container');
+            const width = section.clientWidth;
+            const height = section.clientHeight;
+
+            engine = Engine.create();
+            engine.world.gravity.y = 1.0;
+
+            render = Render.create({
+                element: section,
+                engine: engine,
+                options: {
+                    width, height,
+                    wireframes: false,
+                    background: 'transparent',
+                    pixelRatio: 2 // High DPI for "Glossy" look
+                }
+            });
+
+            // --- BOUNDS ---
+            const walls = [
+                Bodies.rectangle(-25, height / 2, 50, height, { isStatic: true, render: { visible: false } }),
+                Bodies.rectangle(width + 25, height / 2, 50, height, { isStatic: true, render: { visible: false } })
+            ];
+            Composite.add(engine.world, walls);
+
+            // --- STAGGERED PEGS ---
+            const rows = 9;
+            const startY = 80;
+            const gapY = (height - 100) / rows;
+
+            for (let r = 0; r < rows; r++) {
+                const isOffset = (r % 2 === 1);
+                const cols = isOffset ? 6 : 5;
+                const rowWidth = width * 0.9;
+                const spacingX = rowWidth / cols;
+                const startX = (width - rowWidth) / 2 + (spacingX / 2);
+
+                for (let c = 0; c < cols; c++) {
+                    let x = startX + (c * spacingX);
+                    // Stagger correction
+                    if (isOffset) x = startX + (c * spacingX); // Logic simplified via cols count
+                    else x = startX + (c * spacingX); // Already centered via rowWidth logic?
+
+                    // Let's do absolute simpler placement:
+                    const count = isOffset ? 6 : 5;
+                    const step = width / (count + 1);
+                    const px = step * (c + 1);
+
+                    const peg = Bodies.circle(px, startY + (r * gapY), 5, {
+                        isStatic: true,
+                        render: { fillStyle: COLORS.peg },
+                        restitution: 0.6
+                    });
+                    Composite.add(engine.world, peg);
+                }
+            }
+
+            // --- BINS (SENSORS) ---
+            const binW = width / 5;
+            for (let i = 0; i < 5; i++) {
+                // Divider
+                if (i > 0) {
+                    Composite.add(engine.world, Bodies.rectangle(i * binW, height - 20, 2, 40, {
+                        isStatic: true, render: { fillStyle: 'rgba(0,0,0,0.1)' }
+                    }));
+                }
+                // Sensor
+                const sensor = Bodies.rectangle((i * binW) + binW / 2, height, binW, 10, {
+                    isStatic: true, isSensor: true,
+                    label: `bin-${i}` // 0..4
+                });
+                Composite.add(engine.world, sensor);
+            }
+
+            // --- COLLISION EVENTS ---
+            Events.on(engine, 'collisionStart', (evt) => {
+                evt.pairs.forEach(pair => {
+                    const { bodyA, bodyB } = pair;
+                    const sensor = bodyA.label.startsWith('bin-') ? bodyA : bodyB.label.startsWith('bin-') ? bodyB : null;
+                    const ball = bodyA.label.startsWith('ball-') ? bodyA : bodyB.label.startsWith('ball-') ? bodyB : null;
+
+                    if (sensor && ball && !ball.isDone) {
+                        ball.isDone = true;
+                        const binIdx = parseInt(sensor.label.split('-')[1]);
+                        handleBallLanded(ball, binIdx);
+                    }
+                });
+            });
+
+            Runner.run(Runner.create(), engine);
+            Render.run(render);
+        }
+
+        function dropBall(colIdx, numberVal) {
+            const width = render.options.width;
+            const binW = width / 5;
+            const startX = (colIdx * binW) + binW / 2;
+
+            // "Fireball" check
+            const isFireball = false; // TODO: Implement activation logic
+
+            const ball = Bodies.circle(startX, 0, 9, {
+                restitution: 0.6,
+                friction: 0.005,
+                render: {
+                    fillStyle: isFireball ? COLORS.fireball : COLORS.ball,
+                    // Hack for "Glossy" look in Matter.js canvas? 
+                    // Canvas API allows gradient if we pass a visible canvas context, 
+                    // but standard render is simple. 
+                    // We'll stick to flat color for physics and rely on CSS overlay or accept it.
+                    // Actually, let's just make them bright.
+                },
+                label: `ball-${numberVal}`,
+                collisionFilter: isFireball ? { group: -1 } : {} // -1 to collide with nothing? Or just walls?
+            });
+
+            // Attach data
+            ball.numberVal = numberVal;
+
+            Composite.add(engine.world, ball);
+        }
+
+        function handleBallLanded(ball, binIdx) {
+            // 1. Remove ball physics
+            setTimeout(() => {
+                Composite.remove(engine.world, ball);
+            }, 200);
+
+            // 2. Check if bin matches column (Physics Deviation!)
+            const targetVal = ball.numberVal;
+
+            // The ball carried a specific number intended for StartCol.
+            // If it lands in a DIFFERENT bin, does it count? 
+            // Logic: The number is TIED to the ball. So if "37" falls into bin "B", is it B-37? No, 37 is N.
+            // So the column it lands in doesn't change the NUMBER, but maybe validness?
+            // "O Risco: A bola cai sobre o N, mas os pinos podem fazê-la desviar para o I ou G."
+            // Interpretation: User tried to get N-37. Ball drifted to I. 
+            // Does it count as I-something? Or just a Miss?
+            // Typically in these games, the slot at bottom determines the PRIZE/NUMBER.
+            // BUT the User's request says "Pre-Draw". "Topo mostra 37". 
+            // If ball lands in I bin, effectively we missed the N bin.
+            // Let's rule: You only get the number if you land in the CORRECT Bin (or maybe any bin but it keeps the number?).
+            // "A bola tem que bater". "Desviar".
+            // Let's implement: The bin determines the COLUMN. The Ball determined the ROW/VALUE?
+            // Actually, "Em cima do B aparece 3". That implies 3 is associated with B slot.
+            // If I drop for B-3 and it lands in I... I probably get the number for I? 
+            // Let's assume Pre-Draw values are fixed to columns.
+            // So if I aimed for B-3 but land in I, I get whatever was in I's slot (e.g., I-20).
+            // Yes, that makes physics relevant.
+
+            const actualNumber = state.activeSlots[binIdx]; // The number associated with the bin it LANDED in.
+            const colLetter = COLS[binIdx];
+
+            // Daub logic
+            daub(colLetter, actualNumber);
+        }
+
+        function daub(col, num) {
+            // Check board
+            const cell = state.bingoCard.find(c => c.col === COLS.indexOf(col) && c.num === num);
+
+            if (cell && !cell.marked) {
+                // HIT!
+                cell.marked = true;
+                state.markedIndices.add(cell.id);
+
+                // CSS Update
+                const el = document.getElementById(cell.id);
+                el.classList.add('marked');
+                el.style.animation = 'pop 0.3s ease';
+
+                // Coins
+                addCoins(10); // Small reward for hit?
+                state.combo++;
+
+                checkWin();
+            } else {
+                // MISS
+                state.combo = 0;
+            }
+        }
+
+        // --- WIN/GAME OVER ---
+        function checkWin() {
+            // Check Lines? Or Blackout? User said "Blackout" is goal.
+            // "Só ganha a fase se marcar todos os 25 números."
+            const remaining = state.bingoCard.filter(c => !c.marked).length;
+            if (remaining === 0) {
+                // WIN
+                state.isGameOver = true;
+                document.getElementById('game-end-overlay').style.display = 'flex';
+                confetti();
+            }
+        }
+
+        function checkGameOver() {
+            const remaining = state.bingoCard.filter(c => !c.marked).length;
+            if (remaining > 0 && state.balls <= 0) {
+                state.isGameOver = true;
+                document.getElementById('end-title').innerText = "GAME OVER";
+                document.getElementById('end-msg').innerText = "Out of balls!";
+                const btn = document.querySelector('#game-end-overlay button');
+                btn.innerText = "Try Again";
+                btn.onclick = () => location.reload();
+                document.getElementById('game-end-overlay').style.display = 'flex';
+            }
+        }
+
+        // --- UI & SHOP ---
+        function addCoins(n) {
+            state.coins += n;
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('coin-count').innerText = state.coins;
+            document.getElementById('ball-count').innerText = state.balls;
+        }
+
+        function toggleShop() {
+            const el = document.getElementById('shop-overlay');
+            el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        function buyItem(item, cost) {
+            if (state.coins >= cost) {
+                state.coins -= cost;
+                updateUI();
+                if (item === 'balls') {
+                    state.balls += 5;
+                    toggleShop();
+                } else if (item === 'fireball') {
+                    // Activate fireball mode for next shot (logic placeholder)
+                    alert("Fireball equipped! (Logic pending)");
+                    toggleShop();
+                }
+            } else {
+                alert("Not enough coins!");
+            }
+        }
+
+        function nextLevel() {
+            location.reload(); // Simple restart for prototype
+        }
+
+    </script>
+</body>
+
+</html>
