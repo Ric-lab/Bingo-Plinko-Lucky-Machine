@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 
 const COLS = ['B', 'I', 'N', 'G', 'O'];
 
@@ -10,7 +10,59 @@ const PIPE_COLORS = [
     { base: 'bg-violet-500', rim: 'bg-violet-600', hue: 'violet' }
 ];
 
+// Rolling Slot Component
+const RollingSlot = ({ target, delay, onFinish }) => {
+    // Start with a random number so we don't show the answer immediately
+    const [displayNum, setDisplayNum] = useState(() => Math.floor(Math.random() * 75) + 1);
+    const [isFinal, setIsFinal] = useState(false);
+
+    useEffect(() => {
+        const startTime = Date.now();
+        let animationFrameId;
+
+        const update = () => {
+            const now = Date.now();
+            const elapsed = now - startTime;
+
+            if (elapsed < delay) {
+                // Determine if we should update the number (throttle to every ~60ms for visibility)
+                if (now % 60 < 20) { // widened window to 20ms to catch frames
+                    setDisplayNum(Math.floor(Math.random() * 75) + 1);
+                }
+                animationFrameId = requestAnimationFrame(update);
+            } else {
+                setDisplayNum(target);
+                setIsFinal(true);
+                // Delay the "finish" signal slightly to let the number settle visually before showing Gold
+                setTimeout(() => {
+                    if (onFinish) onFinish();
+                }, 200);
+            }
+        };
+
+        animationFrameId = requestAnimationFrame(update);
+        return () => cancelAnimationFrame(animationFrameId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [target, delay]); // Removed onFinish from dependency to prevent restart loops
+
+    return (
+        <span className={`text-3xl font-black drop-shadow-md relative z-10 block w-full text-center ${isFinal ? "animate-bounce-short" : "blur-[1px] opacity-80"}`}>
+            {displayNum}
+        </span>
+    );
+};
+
 export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase }) {
+    // State to track which slots have finished spinning
+    const [revealed, setRevealed] = useState({});
+
+    // Reset revealed state when spin starts (useLayoutEffect to prevent flash)
+    useLayoutEffect(() => {
+        if (phase === 'SPINNING') {
+            setRevealed({});
+        }
+    }, [phase]);
+
     // Check if a number is "useful" (exists in card and not marked)
     const checkIsUseful = (num) => {
         if (!bingoCard || !num) return false;
@@ -20,12 +72,11 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase }
 
     return (
         <div className="absolute bottom-0 left-0 right-0 h-[90px] flex items-end justify-around px-2 z-20 pointer-events-auto">
-            {/* Adjusted White Background: Height 66px aligns with middle of pipe rim (Body 56px + Half Rim 10px) */}
-            <div className="absolute bottom-0 left-0 right-0 h-[66px] bg-white border-t-4 border-gray-100 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] -z-10" />
-
             {slotsResult.map((num, i) => {
                 const isUseful = checkIsUseful(num);
                 const theme = PIPE_COLORS[i];
+                // Only show GOLD if the slot is revealed (or phase is DROP/RESOLVE)
+                const showGold = isUseful && (phase === 'DROP' || phase === 'RESOLVE' || (phase === 'SPINNING' && revealed[i]));
 
                 return (
                     <div key={i} className="w-1/5 flex flex-col items-center justify-end h-full pointer-events-auto cursor-pointer group relative"
@@ -39,7 +90,7 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase }
                         {/* Pipe Rim (Top) - Solid & Opaque */}
                         <div className={`
                  w-[90%] h-5 rounded-sm border-2 border-black/20 shadow-lg z-20 flex items-center justify-center relative
-                 ${isUseful
+                 ${showGold
                                 ? 'bg-yellow-400 border-yellow-200 ring-2 ring-yellow-200 animate-pulse' // GOLD MODE
                                 : `${theme.rim} border-white/20`}
              `}>
@@ -49,7 +100,7 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase }
                         {/* Pipe Body (Bottom) - Solid & Opaque */}
                         <div className={`
                  w-[80%] h-14 border-x-2 border-b-2 border-black/10 shadow-xl flex items-center justify-center transition-all duration-300 relative overflow-hidden
-                 ${isUseful
+                 ${showGold
                                 ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 border-yellow-600 text-yellow-900 scale-105 z-10' // GOLD MODE
                                 : `${theme.base} border-${theme.hue}-700 text-white`
                             }
@@ -58,9 +109,18 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase }
                             {/* Texture/Highlight */}
                             <div className="absolute left-1 top-0 bottom-0 w-2 bg-white/20 blur-[1px]" />
 
-                            <span className="text-3xl font-black drop-shadow-md relative z-10">
-                                {num > 0 ? num : ''}
-                            </span>
+                            {phase === 'SPINNING' ? (
+                                <RollingSlot
+                                    key={`rolling-${i}-${num}`}
+                                    target={num}
+                                    delay={300 + (i * 400)} // 300, 700, 1100, 1500, 1900
+                                    onFinish={() => setRevealed(prev => ({ ...prev, [i]: true }))}
+                                />
+                            ) : (
+                                <span className="text-3xl font-black drop-shadow-md relative z-10">
+                                    {num > 0 ? num : COLS[i]}
+                                </span>
+                            )}
                         </div>
                     </div>
                 );

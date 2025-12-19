@@ -1,4 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+// Helper component for the rolling effect
+const RollingSlot = ({ target, delay }) => {
+    // Start with a random number so we don't show the answer immediately
+    const [displayNum, setDisplayNum] = useState(() => Math.floor(Math.random() * 75) + 1);
+    const [isFinal, setIsFinal] = useState(false);
+
+    useEffect(() => {
+        // console.log(`[RollingSlot] Mount. Target: ${target}, Delay: ${delay}`);
+        const startTime = Date.now();
+        let animationFrameId;
+
+        const update = () => {
+            const now = Date.now();
+            const elapsed = now - startTime;
+
+            if (elapsed < delay) {
+                // Determine if we should update the number (throttle to every ~60ms for visibility)
+                if (now % 60 < 20) { // widened window to 20ms to catch frames
+                    setDisplayNum(Math.floor(Math.random() * 75) + 1);
+                }
+                animationFrameId = requestAnimationFrame(update);
+            } else {
+                // console.log(`[RollingSlot] Finished. Target: ${target}`);
+                setDisplayNum(target);
+                setIsFinal(true);
+            }
+        };
+
+        animationFrameId = requestAnimationFrame(update);
+        return () => cancelAnimationFrame(animationFrameId);
+    }, [target, delay]);
+
+    return (
+        <div className={`flex flex-col items-center justify-center w-full h-full transition-all duration-300 ${isFinal ? "scale-100" : "scale-110"}`}>
+            <span className={`text-2xl font-black ${isFinal ? "text-text-dark animate-bounce-short" : "text-gray-400 blur-sm"}`}>
+                {displayNum}
+            </span>
+            {/* Spinning indicator (optional lines to suggest motion) */}
+            {!isFinal && (
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-transparent animate-pulse pointer-events-none" />
+            )}
+        </div>
+    );
+};
 
 const COLS = ['B', 'I', 'N', 'G', 'O'];
 
@@ -53,8 +98,16 @@ export default function UIOverlay({
                         >
                             <span className="text-xs font-bold text-text-dark opacity-60 mb-1">{letter}</span>
                             <div className="w-full aspect-square bg-gradient-to-br from-white to-gray-100 rounded-xl border-2 border-white shadow-sm flex items-center justify-center text-xl font-bold text-text-dark relative overflow-hidden">
-                                {/* Only show number if NOT spinning (or maybe show '?' or animate) */}
-                                {phase === 'SPIN' ? '?' : slotsResult[i]}
+                                {phase === 'SPIN' ? '?' :
+                                    phase === 'SPINNING' ? (
+                                        <RollingSlot
+                                            key={`rolling-${i}-${slotsResult[i]}`} // Force remount on new spin/result
+                                            target={slotsResult[i]}
+                                            delay={2000 + (i * 700)} // Staggered: 2s...4.8s
+                                            duration={5000}
+                                        />
+                                    ) :
+                                        slotsResult[i]}
                             </div>
                             {/* Arrow hint - Only in DROP phase */}
                             <div className={`text-accent-pink text-xs transition-opacity ${phase === 'DROP' ? 'opacity-100' : 'opacity-0'}`}>▼</div>

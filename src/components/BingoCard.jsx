@@ -32,7 +32,7 @@ export default function BingoCard({ card }) {
                             <div
                                 key={cell.id}
                                 className={`
-                      h-9 flex items-center justify-center rounded-md font-bold text-base shadow-sm border transition-all duration-300 relative overflow-hidden
+                      h-9 flex items-center justify-center rounded-md font-bold text-xl tracking-widest shadow-sm border transition-all duration-300 relative overflow-hidden
                       ${cell.marked
                                         ? 'bg-amber-200 border-amber-500 text-amber-900 ring-2 ring-amber-300 scale-105 z-10 shadow-lg'
                                         : `${theme.bg} ${theme.text} ${theme.border} bg-white hover:brightness-95`}

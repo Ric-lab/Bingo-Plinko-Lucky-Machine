@@ -28,7 +28,7 @@ export function useGameLogic() {
     const [winState, setWinState] = useState(false);
     const [combo, setCombo] = useState(0);
 
-    // PHASE: 'SPIN' (Modal showing) | 'DROP' (Waiting for click) | 'RESOLVE' (Ball falling)
+    // PHASE: 'SPIN' (Modal showing) | 'SPINNING' (Slot animation) | 'DROP' (Waiting for click) | 'RESOLVE' (Ball falling)
     const [phase, setPhase] = useState('SPIN');
 
     // Initialize Level
@@ -70,6 +70,9 @@ export function useGameLogic() {
     // Trigger Spin Logic with SMART RNG
     const startSpin = () => {
         if (phase !== 'SPIN') return;
+
+        // 0. Set Phase to SPINNING immediately
+        setPhase('SPINNING');
 
         // 1. Identify Needed Numbers (Unmarked, Non-Free)
         // Group them by column for easier access
@@ -188,10 +191,10 @@ export function useGameLogic() {
 
         setSlotsResult(newSlots);
 
-        // Transition to DROP after delay
+        // Transition to DROP after delay (SLOT MACHINE TIME)
         setTimeout(() => {
             setPhase('DROP');
-        }, 1000);
+        }, 2200); // 2.2 seconds (buffer for animation)
     };
 
 
@@ -210,7 +213,10 @@ export function useGameLogic() {
     };
 
     // Revised internal handler for when we have the number
-    const resolveTurn = (numberVal) => {
+    const resolveTurn = (numberVal, colIndex) => {
+        // Clear numbers on ALL pipes (show letters)
+        setSlotsResult([0, 0, 0, 0, 0]);
+
         let hit = false;
         const newCard = bingoCard.map(cell => {
             if (cell.num === numberVal && !cell.marked) {
@@ -220,10 +226,13 @@ export function useGameLogic() {
             return cell;
         });
 
+        let earned = 0;
+
         if (hit) {
             setBingoCard(newCard);
             setCombo(prev => prev + 1);
-            setCoins(prev => prev + 10 + (combo * 2));
+            earned = 10 + (combo * 2);
+            setCoins(prev => prev + earned);
 
             const remaining = newCard.filter(c => !c.marked).length;
             if (remaining === 0) {
@@ -246,6 +255,8 @@ export function useGameLogic() {
                 setPhase('GAME_OVER');
             }
         }
+
+        return { hit, earned, combo: hit ? combo + 1 : 0 };
     };
 
     const buyItem = (item, cost) => {

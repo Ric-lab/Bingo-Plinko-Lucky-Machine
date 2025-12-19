@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Header from './components/Header';
 import BingoCard from './components/BingoCard';
 import GameCanvas from './components/GameCanvas';
@@ -6,12 +6,16 @@ import BucketRow from './components/BucketRow';
 import Footer from './components/Footer';
 import { useGameLogic } from './hooks/useGameLogic';
 
+import FeedbackOverlay from './components/FeedbackOverlay';
+
 export default function App() {
   const {
     state: { coins, balls, level, bingoCard, slotsResult, isGameOver, winState, phase },
     actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem }
   } = useGameLogic();
 
+  // Feedback State: { visible, type: 'success'|'failure', message, id }
+  const [feedback, setFeedback] = useState({ visible: false, type: '', message: '' });
   const canvasRef = useRef();
 
   const handleSlotClick = (colIndex) => {
@@ -26,7 +30,32 @@ export default function App() {
 
   const handleBallLanded = (binIndex) => {
     const landedNumber = slotsResult[binIndex];
-    resolveTurn(landedNumber);
+    const result = resolveTurn(landedNumber, binIndex);
+
+    // Trigger Feedback
+    if (result) {
+      if (result.hit) {
+        setFeedback({
+          visible: true,
+          type: 'success',
+          message: 'MATCH!',
+          sub: `+${result.earned}🟡`,
+          id: Date.now()
+        });
+      } else {
+        setFeedback({
+          visible: true,
+          type: 'failure',
+          message: 'TRY AGAIN',
+          id: Date.now()
+        });
+      }
+
+      // Auto-hide after delay
+      setTimeout(() => {
+        setFeedback(prev => ({ ...prev, visible: false }));
+      }, 1500);
+    }
   };
 
   return (
@@ -62,6 +91,9 @@ export default function App() {
           onSlotClick={handleSlotClick} // Input moved here
           phase={phase}
         />
+
+        {/* Visual Feedback Overlay (Inside Physics Area) */}
+        <FeedbackOverlay feedback={feedback} />
       </div>
 
       {/* Compact Footer */}
