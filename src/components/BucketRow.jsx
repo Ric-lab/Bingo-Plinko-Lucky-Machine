@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const COLS = ['B', 'I', 'N', 'G', 'O'];
 
@@ -52,7 +53,108 @@ const RollingSlot = ({ target, delay, onFinish }) => {
     );
 };
 
-export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase }) {
+// --- REUSABLE FLAME UNIT ---
+const FlameUnit = ({ delay, scale, xOffset, id }) => {
+    // Unique ID for gradients based on xOffset/scale to allow slight variations if needed, or just standard gradients
+    const gradId = `fire-grad-${id}`;
+
+    return (
+        <div className="absolute bottom-0" style={{ left: `${50 + xOffset}%`, transform: `translateX(-50%) scale(${scale})` }}>
+            <div className="relative w-10 h-16 flex items-end justify-center"> {/* Smaller Base Size */}
+                <svg width="0" height="0" className="absolute">
+                    <defs>
+                        <linearGradient id={`${gradId}-red`} x1="0%" y1="100%" x2="0%" y2="0%">
+                            <stop offset="0%" stopColor="#7f1d1d" /> {/* Dark Red Base */}
+                            <stop offset="40%" stopColor="#dc2626" /> {/* Red Body */}
+                            <stop offset="100%" stopColor="#ef4444" /> {/* Light Red Tip */}
+                        </linearGradient>
+                        <linearGradient id={`${gradId}-orange`} x1="0%" y1="100%" x2="0%" y2="0%">
+                            <stop offset="0%" stopColor="#c2410c" /> {/* Dark Orange */}
+                            <stop offset="100%" stopColor="#fb923c" /> {/* Light Orange */}
+                        </linearGradient>
+                        <linearGradient id={`${gradId}-yellow`} x1="0%" y1="100%" x2="0%" y2="0%">
+                            <stop offset="0%" stopColor="#f59e0b" /> {/* Amber */}
+                            <stop offset="100%" stopColor="#fef3c7" /> {/* Pale Yellow */}
+                        </linearGradient>
+                    </defs>
+                </svg>
+
+                {/* Individual Glow Blur */}
+                <motion.div
+                    animate={{ opacity: [0.5, 0.8, 0.5], scale: [1, 1.1, 1] }}
+                    transition={{ duration: 1.5 + Math.random(), repeat: Infinity, ease: "easeInOut", delay: delay }}
+                    className="absolute bottom-2 left-0 right-0 -translate-x-1/2 w-10 h-12 bg-orange-500/50 rounded-full blur-[15px] z-[-1]"
+                />
+
+                {/* 1. Outer Flame (Red Gradient) */}
+                <motion.svg
+                    viewBox="0 0 100 100"
+                    className="absolute bottom-0 w-10 h-16 drop-shadow-sm"
+                    animate={{ scaleY: [1, 1.1, 0.9, 1], scaleX: [1, 0.9, 1.1, 1], skewX: [0, 2, -2, 0] }}
+                    transition={{ duration: 0.8 + Math.random() * 0.4, repeat: Infinity, ease: "easeInOut", delay: delay }}
+                >
+                    <path d="M50 0 C65 40 85 50 85 80 C85 100 70 100 50 100 C30 100 15 100 15 80 C15 50 35 40 50 0 Z" fill={`url(#${gradId}-red)`} />
+                </motion.svg>
+
+                {/* 2. Middle Flame (Orange Gradient) */}
+                <motion.svg
+                    viewBox="0 0 100 100"
+                    className="absolute bottom-0 w-8 h-12"
+                    animate={{ scaleY: [1, 1.15, 0.9], rotate: [-3, 3, -3] }}
+                    transition={{ duration: 0.6 + Math.random() * 0.3, repeat: Infinity, ease: "easeInOut", delay: delay + 0.1 }}
+                    style={{ originX: 0.5, originY: 1 }}
+                >
+                    <path d="M50 10 C60 45 75 55 75 80 C75 95 65 95 50 95 C35 95 25 95 25 80 C25 55 40 45 50 10 Z" fill={`url(#${gradId}-orange)`} />
+                </motion.svg>
+
+                {/* 3. Core Flame (Yellow Gradient) */}
+                <motion.svg
+                    viewBox="0 0 100 100"
+                    className="absolute bottom-0 w-4 h-8"
+                    animate={{ scale: [1, 1.3, 1] }}
+                    transition={{ duration: 0.4 + Math.random() * 0.2, repeat: Infinity, ease: "easeInOut", delay: delay }}
+                    style={{ originX: 0.5, originY: 1 }}
+                >
+                    <path d="M50 20 C58 50 65 60 65 80 C65 90 60 95 50 95 C40 95 35 90 35 80 C35 60 42 50 50 20 Z" fill={`url(#${gradId}-yellow)`} />
+                </motion.svg>
+
+                {/* Sparkling Embers */}
+                <motion.div
+                    animate={{ y: [0, -40], opacity: [1, 0], x: [0, Math.random() * 10 - 5] }}
+                    transition={{ duration: 0.8 + Math.random() * 0.5, repeat: Infinity, ease: "easeOut", delay: delay }}
+                    className="absolute bottom-4 left-1/2 w-0.5 h-0.5 bg-yellow-200 rounded-full shadow-[0_0_2px_rgba(255,255,255,0.8)]"
+                />
+                <motion.div
+                    animate={{ y: [0, -30], opacity: [1, 0], x: [0, Math.random() * 10 - 5] }}
+                    transition={{ duration: 1 + Math.random() * 0.5, repeat: Infinity, ease: "easeOut", delay: delay + 0.3 }}
+                    className="absolute bottom-2 left-1/2 w-0.5 h-0.5 bg-orange-200 rounded-full shadow-[0_0_2px_rgba(255,255,255,0.8)]"
+                />
+            </div>
+        </div>
+    );
+};
+
+// --- DISTRIBUTED FIRE CONTAINER ---
+const DistributedFire = () => {
+    return (
+        <div className="absolute bottom-[3.3rem] left-0 right-0 z-0 pointer-events-none h-32 overflow-visible flex justify-center items-end">
+            {/* Container logic: 
+                - left-0 right-0 ensures full width 
+                - flex justify-center ensures 0% xOffset is visually center
+                - items-end aligns flames to bottom
+             */}
+            <div className="relative w-full h-full">
+                <FlameUnit id={1} xOffset={-30} scale={0.8} delay={0.2} />
+                <FlameUnit id={2} xOffset={-15} scale={0.9} delay={0} />
+                <FlameUnit id={3} xOffset={0} scale={1.1} delay={0.4} />
+                <FlameUnit id={4} xOffset={15} scale={0.9} delay={0.1} />
+                <FlameUnit id={5} xOffset={30} scale={0.8} delay={0.3} />
+            </div>
+        </div>
+    );
+};
+
+export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, fireBallActive, magicActive }) {
     // State to track which slots have finished spinning
     const [revealed, setRevealed] = useState({});
 
@@ -71,15 +173,32 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase }
     };
 
     return (
-        <div className="absolute bottom-0 left-0 right-0 h-[90px] flex items-end justify-around px-2 z-20 pointer-events-auto">
+        <div className="absolute bottom-0 left-0 right-0 h-[90px] flex items-end justify-between w-full px-0 z-20 pointer-events-auto">
             {slotsResult.map((num, i) => {
                 const isUseful = checkIsUseful(num);
                 const theme = PIPE_COLORS[i];
                 // Only show GOLD if the slot is revealed (or phase is DROP/RESOLVE)
-                const showGold = isUseful && (phase === 'DROP' || phase === 'RESOLVE' || (phase === 'SPINNING' && revealed[i]));
+                // OR if FIREBALL is active (all/target glow)
+                const isFireTarget = fireBallActive;
+
+                // VISUAL RULE: Gold if Useful AND Revealed, OR if Magic Active (All Pipes)
+                const showGold = (isUseful && (phase === 'DROP' || phase === 'RESOLVE' || (phase === 'SPINNING' && revealed[i]))) || magicActive;
+                // IMPORTANT: We do NOT override the color for Fire anymore. We just add an effect.
+
+                // Determine Base Style based solely on Gold state or Normal state
+                let rimClasses = '';
+                let bodyClasses = '';
+
+                if (showGold) {
+                    rimClasses = 'bg-yellow-400 border-yellow-200 ring-2 ring-yellow-200 animate-pulse';
+                    bodyClasses = 'bg-gradient-to-b from-yellow-300 to-yellow-500 border-yellow-600 text-yellow-900 scale-105 z-10';
+                } else {
+                    rimClasses = `${theme.rim} border-white/20`;
+                    bodyClasses = `${theme.base} border-${theme.hue}-700 text-white`;
+                }
 
                 return (
-                    <div key={i} className="w-1/5 flex flex-col items-center justify-end h-full pointer-events-auto cursor-pointer group relative"
+                    <div key={i} className="flex-1 flex flex-col items-center justify-end h-full pointer-events-auto cursor-pointer group relative"
                         onClick={() => phase === 'DROP' && onSlotClick(i)}>
 
                         {/* Hint Arrow */}
@@ -87,12 +206,15 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase }
                             TAP
                         </div>
 
+                        {/* FIREBALL OVERLAY EFFECT (Realistic Particles) */}
+                        {/* FIREBALL OVERLAY EFFECT (Distributed Vector Style) */}
+                        {isFireTarget && <DistributedFire />}
+
                         {/* Pipe Rim (Top) - Solid & Opaque */}
                         <div className={`
-                 w-[90%] h-5 rounded-sm border-2 border-black/20 shadow-lg z-20 flex items-center justify-center relative
-                 ${showGold
-                                ? 'bg-yellow-400 border-yellow-200 ring-2 ring-yellow-200 animate-pulse' // GOLD MODE
-                                : `${theme.rim} border-white/20`}
+                 w-[90%] h-5 rounded-sm border-2 border-black/20 shadow-lg z-20 flex items-center justify-center relative transition-all duration-300
+                 ${rimClasses}
+                 ${isFireTarget ? 'ring-4 ring-orange-500/60 shadow-[0_0_15px_rgba(255,69,0,0.6)]' : ''} 
              `}>
                             <div className="absolute inset-x-0 top-0 h-[2px] bg-white/40" /> {/* Highlight */}
                         </div>
@@ -100,11 +222,8 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase }
                         {/* Pipe Body (Bottom) - Solid & Opaque */}
                         <div className={`
                  w-[80%] h-14 border-x-2 border-b-2 border-black/10 shadow-xl flex items-center justify-center transition-all duration-300 relative overflow-hidden
-                 ${showGold
-                                ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 border-yellow-600 text-yellow-900 scale-105 z-10' // GOLD MODE
-                                : `${theme.base} border-${theme.hue}-700 text-white`
-                            }
-                 ${phase === 'DROP' ? 'group-hover:brightness-110 active:scale-95 cursor-pointer' : 'brightness-95 cursor-default'}
+                 ${bodyClasses}
+                 ${(phase === 'DROP' || isFireTarget) ? 'group-hover:brightness-110 active:scale-95 cursor-pointer' : 'brightness-95 cursor-default'}
              `}>
                             {/* Texture/Highlight */}
                             <div className="absolute left-1 top-0 bottom-0 w-2 bg-white/20 blur-[1px]" />

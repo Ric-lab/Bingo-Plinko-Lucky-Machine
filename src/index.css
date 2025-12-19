@@ -79,6 +79,41 @@
     }
 }
 
+/* 5. Fade In */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* 6. Scale Pulse (Heartbeat) */
+@keyframes scale-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* 7. Spin Slow */
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* --- CLASSES --- */
 
 .animate-pop-in {
@@ -96,6 +131,71 @@
 
 .animate-shake {
     animation: shake 0.4s ease-in-out;
+}
+
+.animate-fade-in {
+    animation: fade-in 0.5s ease-out;
+}
+
+.animate-scale-pulse {
+    animation: scale-pulse 2s infinite ease-in-out;
+}
+
+.animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+}
+
+/* 8. Fire Particle Rise */
+@keyframes fire-rise {
+    0% {
+        transform: translateY(0) scale(1.0);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: translateY(-40px) scale(0.2);
+        opacity: 0;
+    }
+}
+
+.animate-fire-rise {
+    animation: fire-rise 1s ease-out infinite;
+}
+
+/* 9. Rapid Fire Flicker */
+@keyframes fire-flicker {
+    0% {
+        opacity: 0.9;
+        transform: scale(1) skewX(0deg);
+    }
+
+    25% {
+        opacity: 1;
+        transform: scale(1.05) skewX(1.5deg);
+    }
+
+    50% {
+        opacity: 0.8;
+        transform: scale(0.98) skewX(0deg);
+    }
+
+    75% {
+        opacity: 1;
+        transform: scale(1.02) skewX(-1.5deg);
+    }
+
+    100% {
+        opacity: 0.9;
+        transform: scale(1) skewX(0deg);
+    }
+}
+
+.animate-fire-flicker {
+    animation: fire-flicker 0.15s infinite alternate ease-in-out;
+}
+
+.animate-fire-flicker-slow {
+    animation: fire-flicker 0.3s infinite alternate-reverse ease-in-out;
 }
 
 @layer base {

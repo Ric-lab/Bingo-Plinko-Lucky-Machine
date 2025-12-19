@@ -18,8 +18,46 @@ function getUniqueRandoms(min, max, count) {
     return arr;
 }
 
+function checkBingo(card) {
+    // 1. Rows (0-4)
+    for (let r = 0; r < 5; r++) {
+        const rowCells = card.filter(c => c.row === r);
+        if (rowCells.every(c => c.marked)) return true;
+    }
+
+    // 2. Columns (0-4)
+    for (let c = 0; c < 5; c++) {
+        const colCells = card.filter(cell => cell.col === c);
+        if (colCells.every(c => c.marked)) return true;
+    }
+
+    // 3. Diagonal Top-Left to Bottom-Right
+    // (0,0), (1,1), (2,2), (3,3), (4,4)
+    const diag1 = [
+        card.find(c => c.col === 0 && c.row === 0),
+        card.find(c => c.col === 1 && c.row === 1),
+        card.find(c => c.col === 2 && c.row === 2),
+        card.find(c => c.col === 3 && c.row === 3),
+        card.find(c => c.col === 4 && c.row === 4)
+    ];
+    if (diag1.every(c => c.marked)) return true;
+
+    // 4. Diagonal Top-Right to Bottom-Left
+    // (4,0), (3,1), (2,2), (1,3), (0,4)
+    const diag2 = [
+        card.find(c => c.col === 4 && c.row === 0),
+        card.find(c => c.col === 3 && c.row === 1),
+        card.find(c => c.col === 2 && c.row === 2),
+        card.find(c => c.col === 1 && c.row === 3),
+        card.find(c => c.col === 0 && c.row === 4)
+    ];
+    if (diag2.every(c => c.marked)) return true;
+
+    return false;
+}
+
 export function useGameLogic() {
-    const [coins, setCoins] = useState(0);
+    const [coins, setCoins] = useState(5000); // Start with 5000 coins as requested
     const [balls, setBalls] = useState(50);
     const [level, setLevel] = useState(1);
     const [bingoCard, setBingoCard] = useState([]);
@@ -27,9 +65,14 @@ export function useGameLogic() {
     const [isGameOver, setIsGameOver] = useState(false);
     const [winState, setWinState] = useState(false);
     const [combo, setCombo] = useState(0);
+    const [fireBallActive, setFireBallActive] = useState(false);
+    // Track mercy triggers: { num: number, count: howManyTimesAppeared, lastBall: ballCountAtLastAppear }
+    const [mercyTrack, setMercyTrack] = useState({});
+    const [magicActive, setMagicActive] = useState(false);
 
     // PHASE: 'SPIN' (Modal showing) | 'SPINNING' (Slot animation) | 'DROP' (Waiting for click) | 'RESOLVE' (Ball falling)
     const [phase, setPhase] = useState('SPIN');
+
 
     // Initialize Level
     const initLevel = useCallback(() => {
@@ -68,7 +111,7 @@ export function useGameLogic() {
     }, [initLevel]);
 
     // Trigger Spin Logic with SMART RNG
-    const startSpin = () => {
+    const startSpin = (magicNumberOverride = null) => {
         if (phase !== 'SPIN') return;
 
         // 0. Set Phase to SPINNING immediately
@@ -97,6 +140,116 @@ export function useGameLogic() {
         // Helper to check if we can actually fulfill a match in a column
         // If a column has no needed numbers, we can't force a match there
         const availableCols = [0, 1, 2, 3, 4].filter(c => neededByCol[c].length > 0);
+
+        // --- MAGIC SPIN OVERRIDE ---
+        let forceCol = -1;
+        let forceNum = -1;
+
+        // Check if a specific number is forced (Magic Power-Up)
+        // usage: startSpin(numberToForce)
+        const magicNumber = typeof magicNumberOverride === 'number' ? magicNumberOverride : null;
+
+        if (magicNumber !== null) {
+            // Find the column for this number
+            const cell = bingoCard.find(c => c.num === magicNumber);
+            if (cell) {
+                forceCol = cell.col;
+                forceNum = magicNumber;
+                setMagicActive(true);
+            }
+        }
+        // ---------------------------
+
+        // --- MERCY LOGIC START ---
+
+        // Check for Near Miss Condition (One away from Bingo)
+        // Only active if balls <= 10
+        let mercyOverride = false;
+        let mercyTargetCol = -1;
+        let mercyTargetNum = -1;
+
+        if (balls <= 10) {
+            // Find all numbers that complete a line
+            const nearMisses = [];
+
+            // Helper to see if a set has 4 marked and 1 unmarked
+            const checkNearMiss = (cellList) => {
+                const unmarked = cellList.filter(c => !c.marked && !c.isFree);
+                if (unmarked.length === 1) {
+                    nearMisses.push(unmarked[0]);
+                }
+            };
+
+            // 1. Rows
+            for (let r = 0; r < 5; r++) checkNearMiss(bingoCard.filter(c => c.row === r));
+            // 2. Cols
+            for (let c = 0; c < 5; c++) checkNearMiss(bingoCard.filter(c => c.col === c));
+            // 3. Diagonals
+            const diag1 = [0, 1, 2, 3, 4].map(i => bingoCard.find(c => c.col === i && c.row === i));
+            checkNearMiss(diag1);
+            const diag2 = [0, 1, 2, 3, 4].map(i => bingoCard.find(c => c.col === (4 - i) && c.row === i));
+            checkNearMiss(diag2);
+
+            const uniqueCandidates = [...new Set(nearMisses.map(c => c.num))];
+
+            // Filter candidates that are actually in availableCols (should be all?)
+            // Just double check we have a valid col for them
+            const validCandidates = uniqueCandidates.filter(num => {
+                // find col
+                const cell = bingoCard.find(c => c.num === num);
+                return cell && availableCols.includes(cell.col);
+            });
+
+            if (validCandidates.length > 0) {
+                // Pick one candidate to focus on (consistency)
+                // If we already have a track record for one, stick to it or pick the first
+                // For simplicity, let's target the first one found to be deterministic per spin or pick random
+                // Let's pick random from valid candidates
+                const targetNum = validCandidates[Math.floor(Math.random() * validCandidates.length)];
+                const targetCell = bingoCard.find(c => c.num === targetNum);
+
+                if (targetCell) {
+                    // Check history
+                    const track = mercyTrack[targetNum] || { count: 0, lastBall: -1 };
+
+                    // Logic: We need it to appear 2 times in the remaining balls.
+                    // If balls = 10, and count = 0, we have 10 turns to show 2 times.
+                    // We must NOT show it if lastBall = balls + 1 (consecutive)
+
+                    const canShow = (track.lastBall !== balls + 1); // Ensure non-consecutive
+                    const timesNeeded = 2 - track.count;
+                    const turnsLeft = balls;
+
+                    if (timesNeeded > 0 && canShow) {
+                        // Probability to force it now?
+                        // If we have plenty of turns, small chance. If we are running out, 100% chance.
+                        // Example: Needed 2, Turns 5. We must trigger soon.
+                        // Simple heuristic: Chance = Needed / TurnsLeft * 1.5 (boosted)
+                        // Or just FORCE it if (TurnsLeft <= Needed * 2) or randomness.
+
+                        let chance = (timesNeeded / turnsLeft);
+                        // Boost it slightly so we don't wait till the very last second
+                        chance = Math.min(chance * 1.5, 1.0);
+
+                        if (Math.random() < chance) {
+                            mercyOverride = true;
+                            mercyTargetCol = targetCell.col;
+                            mercyTargetNum = targetNum;
+
+                            // Update Track
+                            setMercyTrack(prev => ({
+                                ...prev,
+                                [targetNum]: {
+                                    count: track.count + 1,
+                                    lastBall: balls
+                                }
+                            }));
+                        }
+                    }
+                }
+            }
+        }
+        // --- MERCY LOGIC END ---
 
         // If we can't support the target count, degrade it
         if (availableCols.length < targetCount) {
@@ -160,32 +313,43 @@ export function useGameLogic() {
         // 4. Fill Data
         const newSlots = [0, 0, 0, 0, 0];
 
-        for (let c = 0; c < 5; c++) {
-            if (chosenIndices.includes(c)) {
-                // Golden Match: Pick a needed number
-                const possible = neededByCol[c];
-                // Randomly pick one of the needed numbers
-                newSlots[c] = possible[Math.floor(Math.random() * possible.length)];
-            } else {
-                // Standard: Pick a number NOT on the card for this column
-                const range = RANGES[COLS[c]];
-                let candidate = -1;
+        if (magicNumber !== null) {
+            // MAGIC NUMBER MODE: User chose a specific number.
+            // Requirement: "COLOCAR O VALOR QUE ELA ESCOLHEU EM TODOS OS CANOS"
+            // We fill ALL slots with the chosen number so they win no matter where they drop.
+            newSlots.fill(magicNumber);
+        } else {
+            // NORMAL SPIN MODE
+            for (let c = 0; c < 5; c++) {
+                if (mercyOverride && c === mercyTargetCol) {
+                    // FORCE THE MERCY NUMBER
+                    newSlots[c] = mercyTargetNum;
+                } else if (chosenIndices.includes(c)) {
+                    // Golden Match: Pick a needed number
+                    const possible = neededByCol[c];
+                    // Randomly pick one of the needed numbers
+                    newSlots[c] = possible[Math.floor(Math.random() * possible.length)];
+                } else {
+                    // Standard: Pick a number NOT on the card for this column
+                    const range = RANGES[COLS[c]];
+                    let candidate = -1;
 
-                // Get all existing numbers in this column to exclude
-                const existingInCol = bingoCard
-                    .filter(cell => cell.col === c)
-                    .map(cell => cell.num); // Includes 'FREE' but that's a string, num is int usually (except FREE)
+                    // Get all existing numbers in this column to exclude
+                    const existingInCol = bingoCard
+                        .filter(cell => cell.col === c)
+                        .map(cell => cell.num);
 
-                // Safety break
-                let attempts = 0;
-                do {
-                    candidate = getRandomInt(range[0], range[1]);
-                    attempts++;
-                } while (
-                    (existingInCol.includes(candidate) || candidate === 'FREE') && attempts < 50
-                );
+                    // Safety break
+                    let attempts = 0;
+                    do {
+                        candidate = getRandomInt(range[0], range[1]);
+                        attempts++;
+                    } while (
+                        (existingInCol.includes(candidate) || candidate === 'FREE') && attempts < 50
+                    );
 
-                newSlots[c] = candidate;
+                    newSlots[c] = candidate;
+                }
             }
         }
 
@@ -209,12 +373,22 @@ export function useGameLogic() {
         setPhase('RESOLVE');
         setBalls(b => b - 1);
 
+        // DO NOT Reset Fireball here - wait for resolveTurn
+        // if (fireBallActive) {
+        //    setFireBallActive(false);
+        // }
+
         return true;
     };
 
     // Revised internal handler for when we have the number
     const resolveTurn = (numberVal, colIndex) => {
+        // Reset Fireball now that ball has landed
+        if (fireBallActive) setFireBallActive(false);
+        if (magicActive) setMagicActive(false);
+
         // Clear numbers on ALL pipes (show letters)
+
         setSlotsResult([0, 0, 0, 0, 0]);
 
         let hit = false;
@@ -234,11 +408,12 @@ export function useGameLogic() {
             earned = 10 + (combo * 2);
             setCoins(prev => prev + earned);
 
-            const remaining = newCard.filter(c => !c.marked).length;
-            if (remaining === 0) {
+            const hasBingo = checkBingo(newCard); // NEW check
+            if (hasBingo) {
                 setWinState(true);
                 setIsGameOver(true);
                 setPhase('GAME_OVER');
+                setCoins(prev => prev + 100); // REWARD 100 COINS
             } else {
                 // Back to SPIN
                 setPhase('SPIN');
@@ -266,6 +441,8 @@ export function useGameLogic() {
                 setBalls(b => b + 5);
                 setIsGameOver(false);
                 if (phase === 'GAME_OVER') setPhase('SPIN');
+            } else if (item === 'fireball') {
+                setFireBallActive(true);
             }
             return true;
         }
@@ -273,7 +450,7 @@ export function useGameLogic() {
     };
 
     return {
-        state: { coins, balls, level, bingoCard, slotsResult, isGameOver, winState, phase },
+        state: { coins, balls, level, bingoCard, slotsResult, isGameOver, winState, phase, fireBallActive, magicActive },
         actions: { initLevel, startSpin, completeSpin, dropBall, resolveTurn, buyItem }
     };
 }

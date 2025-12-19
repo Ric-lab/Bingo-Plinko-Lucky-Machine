@@ -23,7 +23,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
     }, [onBallLanded]);
 
     useImperativeHandle(ref, () => ({
-        dropBall: (colIdx) => {
+        dropBall: (colIdx, isFireBall = false) => {
             if (!engineRef.current || !renderRef.current) return;
 
             const width = renderRef.current.options.width;
@@ -32,16 +32,25 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             const startX = (colIdx * binW) + binW / 2;
 
             const ball = Bodies.circle(startX, -20, 12, {
-                restitution: 0.7,
-                friction: 0.03,
+                restitution: isFireBall ? 0.0 : 0.7, // No bounce for fire
+                friction: isFireBall ? 0 : 0.03,
+                frictionAir: isFireBall ? 0.02 : 0, // Fall slightly steadier?
                 density: 0.25,
-                render: { fillStyle: COLORS.ball, strokeStyle: '#fff', lineWidth: 2 },
-                label: 'player-ball',
-                isSensor: false
+                render: {
+                    fillStyle: isFireBall ? '#ff4d00' : COLORS.ball,
+                    strokeStyle: isFireBall ? '#ffae00' : '#fff',
+                    lineWidth: isFireBall ? 4 : 2
+                },
+                label: isFireBall ? 'fireball' : 'player-ball',
+                isSensor: isFireBall // FIREBALL IGNORES ALL COLLISIONS (But triggers events)
             });
 
-            // Random slight x velocity (chaos)
-            Matter.Body.setVelocity(ball, { x: (Math.random() - 0.5) * 3, y: 0 });
+            // Random slight x velocity (chaos) ONLY IF NOT FIREBALL
+            if (!isFireBall) {
+                Matter.Body.setVelocity(ball, { x: (Math.random() - 0.5) * 3, y: 0 });
+            } else {
+                Matter.Body.setVelocity(ball, { x: 0, y: 5 }); // Push it down
+            }
 
             Composite.add(engineRef.current.world, ball);
         }
@@ -255,8 +264,8 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                     let ball = null;
                     let sensor = null;
 
-                    if (bodyA.label === 'player-ball') ball = bodyA;
-                    else if (bodyB.label === 'player-ball') ball = bodyB;
+                    if (bodyA.label === 'player-ball' || bodyA.label === 'fireball') ball = bodyA;
+                    else if (bodyB.label === 'player-ball' || bodyB.label === 'fireball') ball = bodyB;
 
                     if (bodyA.label.startsWith('bin-')) sensor = bodyA;
                     else if (bodyB.label.startsWith('bin-')) sensor = bodyB;
@@ -281,12 +290,120 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
 
                         // 5. INSTANT REMOVAL (No Fade, No Delay)
                         Composite.remove(engine.world, ball);
-
-                        // Optional: cleanup from set after a moment? 
-                        // Not strictly necessary as body is gone, but good for memory if many balls.
-                        // processedBalls.current.delete(ball.id); 
                     }
                 });
+            });
+
+            // --- ADVANCED PARTICLE SYSTEM FOR FIREBALLS (COMET) ---
+            const particles = [];
+
+            // Helper to add particles
+            const emitParticles = (x, y) => {
+                // 1. Core Fire (Intense, Fast)
+                for (let i = 0; i < 5; i++) {
+                    particles.push({
+                        x: x + (Math.random() - 0.5) * 10,
+                        y: y + (Math.random() - 0.5) * 10,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() * -3) - 1, // Upward bias relative to ball (which falls down, effectively trail stays behind)
+                        life: 1.0,
+                        decay: 0.05 + Math.random() * 0.05,
+                        size: 6 + Math.random() * 6,
+                        color: '255, 100, 0', // OrangeBase
+                        type: 'core'
+                    });
+                }
+
+                // 2. Sparks (Wide spread, long life)
+                for (let i = 0; i < 3; i++) {
+                    particles.push({
+                        x: x,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 10,
+                        vy: (Math.random() - 0.5) * 10,
+                        life: 1.0,
+                        decay: 0.02 + Math.random() * 0.02,
+                        size: 2 + Math.random() * 2,
+                        color: '255, 255, 0', // Yellow
+                        type: 'spark'
+                    });
+                }
+
+                // 3. Smoke (Rising, Dark)
+                if (Math.random() > 0.5) {
+                    particles.push({
+                        x: x + (Math.random() - 0.5) * 20,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: -2 - Math.random(), // Floats up
+                        life: 1.0,
+                        decay: 0.015,
+                        size: 10 + Math.random() * 10,
+                        color: '50, 50, 50', // Gray
+                        type: 'smoke'
+                    });
+                }
+            };
+
+            Events.on(render, 'afterRender', () => {
+                const ctx = render.context;
+                const bodies = Composite.allBodies(engine.world);
+
+                // 1. EMIT from active fireballs
+                bodies.forEach(body => {
+                    if (body.label === 'fireball') {
+                        emitParticles(body.position.x, body.position.y);
+
+                        // Draw Glowing Head
+                        const x = body.position.x;
+                        const y = body.position.y;
+
+                        // Intense Core Glow
+                        const gradient = ctx.createRadialGradient(x, y, 5, x, y, 40);
+                        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                        gradient.addColorStop(0.2, 'rgba(255, 200, 0, 0.8)');
+                        gradient.addColorStop(0.5, 'rgba(255, 69, 0, 0.4)');
+                        gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+                        ctx.globalCompositeOperation = 'screen'; // Additive blending for glow
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 45, 0, 2 * Math.PI);
+                        ctx.fill();
+                        ctx.globalCompositeOperation = 'source-over'; // Reset
+                    }
+                });
+
+                // 2. UPDATE & DRAW Particles
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= p.decay;
+
+                    if (p.life <= 0) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI);
+
+                    // Dynamic colors based on life/type
+                    if (p.type === 'core') {
+                        // Fade from Yellow to Red
+                        const red = 255;
+                        const green = Math.floor(255 * p.life); // 255 -> 0
+                        const blue = 0;
+                        ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${p.life})`;
+                    } else if (p.type === 'spark') {
+                        ctx.fillStyle = `rgba(255, 255, 200, ${p.life})`;
+                    } else if (p.type === 'smoke') {
+                        ctx.fillStyle = `rgba(50, 50, 50, ${p.life * 0.5})`;
+                    }
+
+                    ctx.fill();
+                }
             });
 
             // DEBUG: Log all bodies to verify existence
