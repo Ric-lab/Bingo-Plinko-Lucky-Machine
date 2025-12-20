@@ -131,10 +131,16 @@ export function useGameLogic() {
 
     // Trigger Spin Logic with SMART RNG
     const startSpin = (magicNumberOverride = null) => {
-        if (phase !== 'SPIN') return;
+        // ALLOW Magic Number during DROP phase
+        if (phase !== 'SPIN' && !(phase === 'DROP' && magicNumberOverride !== null)) return;
 
-        // 0. Set Phase to SPINNING immediately
-        setPhase('SPINNING');
+        // If applying Magic Number during DROP, we skip the spin animation
+        const isInstantMagic = (phase === 'DROP' && magicNumberOverride !== null);
+
+        if (!isInstantMagic) {
+            // 0. Set Phase to SPINNING immediately (Normal Spin)
+            setPhase('SPINNING');
+        }
 
         // 1. Identify Needed Numbers (Unmarked, Non-Free)
         // Group them by column for easier access
@@ -375,9 +381,14 @@ export function useGameLogic() {
         setSlotsResult(newSlots);
 
         // Transition to DROP after delay (SLOT MACHINE TIME)
-        setTimeout(() => {
-            setPhase('DROP');
-        }, 2200); // 2.2 seconds (buffer for animation)
+        if (!isInstantMagic) {
+            setTimeout(() => {
+                setPhase('DROP');
+            }, 2200); // 2.2 seconds (buffer for animation)
+        } else {
+            // If instant, we are already in DROP, just ensure state is ready (reduntant but safe)
+            // setPhase('DROP'); 
+        }
     };
 
 
