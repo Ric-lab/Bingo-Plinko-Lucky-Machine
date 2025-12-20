@@ -190,8 +190,8 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
                 let bodyClasses = '';
 
                 if (showGold) {
-                    rimClasses = 'bg-yellow-400 border-yellow-200 ring-2 ring-yellow-200 animate-pulse';
-                    bodyClasses = 'bg-gradient-to-b from-yellow-300 to-yellow-500 border-yellow-600 text-yellow-900 scale-105 z-10';
+                    rimClasses = 'bg-yellow-300 border-yellow-400';
+                    bodyClasses = 'bg-gradient-to-b from-yellow-200 to-yellow-300 border-yellow-500 text-yellow-800 scale-105 z-10';
                 } else {
                     rimClasses = `${theme.rim} border-white/20`;
                     bodyClasses = `${theme.base} border-${theme.hue}-700 text-white`;
@@ -201,10 +201,6 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
                     <div key={i} className="flex-1 flex flex-col items-center justify-end h-full pointer-events-auto cursor-pointer group relative"
                         onClick={() => phase === 'DROP' && onSlotClick(i)}>
 
-                        {/* Hint Arrow */}
-                        <div className={`absolute -top-6 transition-all duration-300 animate-bounce ${phase === 'DROP' ? 'opacity-100' : 'opacity-0'} text-xs font-black text-white drop-shadow-md z-30`}>
-                            TAP
-                        </div>
 
                         {/* FIREBALL OVERLAY EFFECT (Realistic Particles) */}
                         {/* FIREBALL OVERLAY EFFECT (Distributed Vector Style) */}
@@ -212,7 +208,7 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
 
                         {/* Pipe Rim (Top) - Solid & Opaque */}
                         <div className={`
-                 w-[90%] h-5 rounded-sm border-2 border-black/20 shadow-lg z-20 flex items-center justify-center relative transition-all duration-300
+                 w-[90%] h-5 rounded-sm border-2 border-black/20 shadow-lg z-20 flex items-center justify-center relative transition-all duration-200
                  ${rimClasses}
                  ${isFireTarget ? 'shadow-[0_0_15px_rgba(255,69,0,0.6)]' : ''} 
              `}>
@@ -221,7 +217,7 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
 
                         {/* Pipe Body (Bottom) - Solid & Opaque */}
                         <div className={`
-                 w-[80%] h-14 border-x-2 border-b-2 border-black/10 shadow-xl flex items-center justify-center transition-all duration-300 relative overflow-hidden
+                 w-[80%] h-14 border-x-2 border-b-2 border-black/10 shadow-xl flex items-center justify-center transition-all duration-200 relative overflow-hidden
                  ${bodyClasses}
                  ${(phase === 'DROP' || isFireTarget) ? 'group-hover:brightness-110 active:scale-95 cursor-pointer' : 'brightness-95 cursor-default'}
              `}>

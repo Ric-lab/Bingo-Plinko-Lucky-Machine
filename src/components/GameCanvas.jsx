@@ -4,8 +4,8 @@ import Matter from 'matter-js';
 const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
 
 const COLORS = {
-    peg: '#795548',
-    ball: '#e91e63'
+    peg: '#8333b1ff',
+    ball: '#ff0055ff'
 };
 
 const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
@@ -31,10 +31,10 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             // Start center of the chosen column
             const startX = (colIdx * binW) + binW / 2;
 
-            const ball = Bodies.circle(startX, -20, 12, {
+            const ball = Bodies.circle(startX, -20, 16, {
                 restitution: isFireBall ? 0.0 : 0.7, // No bounce for fire
-                friction: isFireBall ? 0 : 0.03,
-                frictionAir: isFireBall ? 0.02 : 0, // Fall slightly steadier?
+                friction: isFireBall ? 0 : 0.1,
+                frictionAir: isFireBall ? 0.07 : 0, // Fall slightly steadier?
                 density: 0.25,
                 render: {
                     fillStyle: isFireBall ? '#ff4d00' : COLORS.ball,
@@ -72,7 +72,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
 
             // Setup Matter JS
             const engine = Engine.create();
-            engine.world.gravity.y = 1.3;
+            engine.world.gravity.y = 1.2;
             engineRef.current = engine;
 
             const render = Render.create({
@@ -104,41 +104,63 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             // Actually, I'll do two replace calls. This one is for Render options.
 
 
-            // Pegs (Staggered Grid)
-            const pegRadius = 3.5;
-            const rows = 14;
-            const startY = 40;
-            const endY = height - 80; // Leave room for buckets
-            const gapY = (endY - startY) / rows;
+            // Pegs (Aligned Grid)
+            const pegRadius = 7;
+            // Rows: Adjust count for density. 
+            // 16 rows makes it denser and harder.
+            const rows = 13;
+            const startY = 80; // Start lower to give space for ball spawn
+            const endY = height - 100; // Stop above the funnels
+            const gapY = (endY - startY) / (rows - 1);
 
-            // Edge-to-Edge Grid (Pins on Wall)
-            // Fixes "Stuck" (Convex shape) AND "Free Fall" (No gap)
-            const cols = 9;
-            const gapX = width / (cols - 1);
+            // Unit Width (Matches Bins)
+            const binW = width / 5;
 
             for (let r = 0; r < rows; r++) {
-                const isOffset = (r % 2 === 1);
-                const colsInRow = isOffset ? cols - 1 : cols;
+                const isEven = (r % 2 === 0);
 
-                // Even: 0..width (starts at 0)
-                // Odd:  Offset by half gap
-                const startX = isOffset ? gapX / 2 : 0;
+                // Row Logic:
+                // Even Rows: Aligned with Funnels (Edges). 6 Pegs: 0, 1, 2, 3, 4, 5
+                // Odd Rows: Aligned with Bin Centers. 5 Pegs: 0.5, 1.5, 2.5, 3.5, 4.5
 
-                for (let c = 0; c < colsInRow; c++) {
-                    const px = startX + (c * gapX);
+                if (isEven) {
+                    // FUNNEL ALIGNED (At the dividers)
+                    // We want pegs at x = 0, binW, 2*binW... 5*binW
+                    for (let c = 0; c <= 5; c++) {
+                        // Skip edges if we want balls to stay in play? 
+                        // Actually, pegs on the wall (0 and Width) might cause jamming or be redundant if we have walls.
+                        // But if we want "On top of triangle", the Side Triangles are at 0 and Width.
+                        // So we should place them, but maybe made them static/visual or just let them be.
+                        // Let's place them for full coverage.
+                        const px = c * binW;
 
-                    const peg = Bodies.circle(px, startY + (r * gapY), pegRadius, {
-                        isStatic: true,
-                        render: { fillStyle: COLORS.peg },
-                        restitution: 0.5,
-                        label: 'peg'
-                    });
-                    Composite.add(engine.world, peg);
+                        const peg = Bodies.circle(px, startY + (r * gapY), pegRadius, {
+                            isStatic: true,
+                            render: { fillStyle: COLORS.peg },
+                            restitution: 0.5,
+                            label: 'peg'
+                        });
+                        Composite.add(engine.world, peg);
+                    }
+                } else {
+                    // CENTER ALIGNED (Between dividers)
+                    // We want pegs at x = binW/2, 1.5*binW...
+                    for (let c = 0; c < 5; c++) {
+                        const px = (c * binW) + (binW / 2);
+
+                        const peg = Bodies.circle(px, startY + (r * gapY), pegRadius, {
+                            isStatic: true,
+                            render: { fillStyle: COLORS.peg },
+                            restitution: 0.5,
+                            label: 'peg'
+                        });
+                        Composite.add(engine.world, peg);
+                    }
                 }
             }
 
             // Physical Separators for Buckets
-            const binW = width / 5;
+            // binW is already defined above
             const wallThick = 4;
             const bucketHeight = 60; // Physical height of separators
 
@@ -152,7 +174,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                 // We can add the Left funnel on i=0. The Right funnel triggers on i=4 (at x+binW).
 
                 const funnelWidth = 40; // Double width (was 20)
-                const funnelHeight = 100; // Normalized height
+                const funnelHeight = 90; // Normalized height
 
                 // Standard VISIBLE PINK Funnel (Internal) - DEBUGGING POSITION
                 const internalOptions = {
@@ -183,56 +205,18 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                 };
 
                 // 1. Funnel on the LEFT of the current bin (at x)
-                // Only for i > 0 (internal dividers)
-                if (i > 0) {
-                    // Using Trapezoid as a "Wedge"
-                    // Position: Center aligned with the gap. 
-                    // ADJUSTMENT: Lowered to height-40 (was height-60) to avoid jamming with low pegs.
-                    Composite.add(engine.world, Bodies.trapezoid(x, height - 40, 40, 120, 1, internalOptions));
-                }
+                // This covers:
+                // i=0: Left Wall (x=0)
+                // i=1..4: Internal Dividers
+                Composite.add(engine.world, Bodies.trapezoid(x, height - 33, 40, funnelHeight, 1, internalOptions));
 
-                // 2. Edge Funnels (Left Wall and Right Wall) using Rotated Rectangles
-                // This creates a solid "Ramp" that is mathematically simpler and unavoidable.
-                const rampLength = 120;
-                const rampThick = 20;
-
-                // CORRECTION: Move ramps UP to the "Mouth" of the pipe.
-                // Pipe is ~80px tall. Previous -30 was at the bottom.
-                // New position: -80 guarantees we catch it at the top rim.
-                const rampY = height - 85;
-
-                if (i === 0) {
-                    // Left Ramp ( / shape )
-                    // Positioned higher to catch ball early
-                    const ramp = Bodies.rectangle(0, rampY, rampLength, rampThick, {
-                        isStatic: true,
-                        angle: Math.PI / 4, // 45 degrees
-                        friction: 0,
-                        render: {
-                            fillStyle: '#FF1493',
-                            opacity: 0,       // INVISIBLE
-                            visible: false
-                        },
-                        label: 'ramp-left'
-                    });
-                    Composite.add(engine.world, ramp);
-                }
+                // 2. Funnel on the RIGHT of the LAST bin (at x + binW)
+                // This covers: Right Wall (x=width)
                 if (i === 4) {
-                    // Right Ramp ( \ shape )
-                    // Positioned higher to catch ball early
-                    const ramp = Bodies.rectangle(width, rampY, rampLength, rampThick, {
-                        isStatic: true,
-                        angle: -Math.PI / 4, // -45 degrees
-                        friction: 0,
-                        render: {
-                            fillStyle: '#FF1493',
-                            opacity: 0,       // INVISIBLE
-                            visible: false
-                        },
-                        label: 'ramp-right'
-                    });
-                    Composite.add(engine.world, ramp);
+                    Composite.add(engine.world, Bodies.trapezoid(x + binW, height - 33, 40, funnelHeight, 1, internalOptions));
                 }
+
+                // (Ramp logic removed - replaced by Trapezoids above)
 
                 // Sensor (The Trigger) - AT THE MOUTH
                 // Position: Slightly inside the mouth so it looks like it enters.
