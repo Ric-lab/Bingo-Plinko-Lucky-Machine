@@ -214,7 +214,7 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
                         <div className={`
                  w-[90%] h-5 rounded-sm border-2 border-black/20 shadow-lg z-20 flex items-center justify-center relative transition-all duration-300
                  ${rimClasses}
-                 ${isFireTarget ? 'ring-4 ring-orange-500/60 shadow-[0_0_15px_rgba(255,69,0,0.6)]' : ''} 
+                 ${isFireTarget ? 'shadow-[0_0_15px_rgba(255,69,0,0.6)]' : ''} 
              `}>
                             <div className="absolute inset-x-0 top-0 h-[2px] bg-white/40" /> {/* Highlight */}
                         </div>

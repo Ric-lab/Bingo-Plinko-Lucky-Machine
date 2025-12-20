@@ -5,6 +5,9 @@ const RANGES = {
     'B': [1, 15], 'I': [16, 30], 'N': [31, 45], 'G': [46, 60], 'O': [61, 75]
 };
 
+// CONFIGURATION
+const BALLS_PER_LEVEL = 5;
+
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -57,7 +60,7 @@ function checkBingo(card) {
 }
 
 export function useGameLogic() {
-    const [coins, setCoins] = useState(5000); // Start with 5000 coins as requested
+    const [coins, setCoins] = useState(40000);
     const [balls, setBalls] = useState(50);
     const [level, setLevel] = useState(1);
     const [bingoCard, setBingoCard] = useState([]);
@@ -76,6 +79,7 @@ export function useGameLogic() {
 
     // Initialize Level
     const initLevel = useCallback(() => {
+        console.log("Initializing Level:", level);
         // Generate Numbers per Column first (so we have valid ranges)
         let colsData = [[], [], [], [], []];
         for (let c = 0; c < 5; c++) {
@@ -103,12 +107,27 @@ export function useGameLogic() {
         setWinState(false);
         setIsGameOver(false);
         setPhase('SPIN'); // Start with spin
+
+        // RESET GAME CONDITIONS (Preserve Coins)
+        setBalls(BALLS_PER_LEVEL);
+        setMercyTrack({});
+        setCombo(0);
+        setSlotsResult([0, 0, 0, 0, 0]);
+        setFireBallActive(false);
+        setMagicActive(false);
     }, [level]);
 
     // Setup on mount
     useEffect(() => {
+        console.log("Effect triggered for Level:", level);
         initLevel();
     }, [initLevel]);
+
+    const nextLevel = () => {
+        console.log("Next Level Requested");
+        setLevel(prev => prev + 1);
+        // initLevel will automatically trigger via useEffect because it depends on level
+    };
 
     // Trigger Spin Logic with SMART RNG
     const startSpin = (magicNumberOverride = null) => {
@@ -405,7 +424,7 @@ export function useGameLogic() {
         if (hit) {
             setBingoCard(newCard);
             setCombo(prev => prev + 1);
-            earned = 10 + (combo * 2);
+            earned = 5; // Fixed reward, no combo multiplier
             setCoins(prev => prev + earned);
 
             const hasBingo = checkBingo(newCard); // NEW check
@@ -413,25 +432,41 @@ export function useGameLogic() {
                 setWinState(true);
                 setIsGameOver(true);
                 setPhase('GAME_OVER');
-                setCoins(prev => prev + 100); // REWARD 100 COINS
+                setCoins(prev => prev + (100 + level)); // REWARD 100 + Level COINS
             } else {
-                // Back to SPIN
-                setPhase('SPIN');
+                // If NO Bingo, we must still check if we are out of balls
+                if (balls <= 0) {
+                    setIsGameOver(true);
+                    setPhase('GAME_OVER');
+                    isDefeat = true;
+                } else {
+                    // Back to SPIN
+                    setPhase('SPIN');
+                }
             }
         } else {
             setCombo(0);
-            setPhase('SPIN');
-        }
 
-        // Check balls
-        if (balls <= 0 && !hit) {
-            if (!winState) {
-                setIsGameOver(true);
-                setPhase('GAME_OVER');
+            // Check balls for defeat
+            if (balls <= 0) {
+                if (!winState) { // Should be covered, but safety check
+                    setIsGameOver(true);
+                    setPhase('GAME_OVER');
+                    isDefeat = true;
+                }
+            } else {
+                setPhase('SPIN');
             }
         }
 
-        return { hit, earned, combo: hit ? combo + 1 : 0 };
+        const hasBingo = hit && checkBingo(newCard);
+        return {
+            hit,
+            earned,
+            combo: hit ? combo + 1 : 0,
+            hasBingo: winState || hasBingo,
+            isDefeat
+        };
     };
 
     const buyItem = (item, cost) => {
@@ -441,8 +476,15 @@ export function useGameLogic() {
                 setBalls(b => b + 5);
                 setIsGameOver(false);
                 if (phase === 'GAME_OVER') setPhase('SPIN');
+            } else if (item === 'continue') {
+                setBalls(b => b + 10);
+                setIsGameOver(false);
+                setPhase('SPIN');
             } else if (item === 'fireball') {
                 setFireBallActive(true);
+            } else if (item === 'magic') {
+                // Magic is handled in startSpin usually, but if we need state here:
+                // (Currently magic logic is immediate in handleMagicConfirm)
             }
             return true;
         }
@@ -451,6 +493,6 @@ export function useGameLogic() {
 
     return {
         state: { coins, balls, level, bingoCard, slotsResult, isGameOver, winState, phase, fireBallActive, magicActive },
-        actions: { initLevel, startSpin, completeSpin, dropBall, resolveTurn, buyItem }
+        actions: { initLevel, startSpin, completeSpin, dropBall, resolveTurn, buyItem, nextLevel }
     };
 }

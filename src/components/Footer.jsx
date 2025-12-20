@@ -3,8 +3,8 @@ import { Flame, Wand2, Calculator } from 'lucide-react';
 
 export default function Footer({ phase, onSpin, onPowerUp, coins }) {
     const isSpinning = phase === 'SPIN';
-    const canAffordFireball = coins >= 100;
-    const canAffordMagic = coins >= 300;
+    const canAffordFireball = coins >= 250;
+    const canAffordMagic = coins >= 500;
 
     return (
         <div className="w-full h-[80px] bg-white border-t border-gray-200 flex items-center justify-between px-4 pb-2 pt-2 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex-shrink-0">
@@ -20,7 +20,7 @@ export default function Footer({ phase, onSpin, onPowerUp, coins }) {
                 disabled={phase === 'RESOLVE' || phase === 'GAME_OVER'}
             >
                 <Flame size={28} fill={canAffordFireball ? "#f97316" : "currentColor"} />
-                <span className="absolute -bottom-2 bg-black/70 text-white text-[10px] px-1 rounded-full font-bold">100</span>
+                <span className="absolute -bottom-2 bg-black/70 text-white text-[10px] px-1 rounded-full font-bold">250</span>
             </button>
 
             {/* SPIN BUTTON (Pill) */}
@@ -48,7 +48,7 @@ export default function Footer({ phase, onSpin, onPowerUp, coins }) {
                 disabled={phase === 'RESOLVE' || phase === 'GAME_OVER'}
             >
                 <Wand2 size={26} />
-                <span className="absolute -bottom-2 bg-black/70 text-white text-[10px] px-1 rounded-full font-bold">300</span>
+                <span className="absolute -bottom-2 bg-black/70 text-white text-[10px] px-1 rounded-full font-bold">500</span>
             </button>
 
         </div>

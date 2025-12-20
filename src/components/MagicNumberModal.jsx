@@ -4,6 +4,13 @@ import { X, Check, Wand2 } from 'lucide-react';
 export default function MagicNumberModal({ isOpen, onClose, onConfirm, bingoCard }) {
     const [selectedId, setSelectedId] = useState(null);
 
+    // Reset selection whenever modal opens
+    React.useEffect(() => {
+        if (isOpen) {
+            setSelectedId(null);
+        }
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     // Helper to get selection details
@@ -17,7 +24,7 @@ export default function MagicNumberModal({ isOpen, onClose, onConfirm, bingoCard
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col relative animate-scale-up">
 
                 {/* Header */}
@@ -96,7 +103,7 @@ export default function MagicNumberModal({ isOpen, onClose, onConfirm, bingoCard
                             <>
                                 <span>CONFIRM</span>
                                 <span className="bg-black/20 px-2 py-0.5 rounded text-sm font-bold flex items-center gap-1">
-                                    -300 🟡
+                                    -500 🟡
                                 </span>
                             </>
                         ) : (
