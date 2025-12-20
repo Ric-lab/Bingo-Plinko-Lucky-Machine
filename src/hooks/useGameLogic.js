@@ -413,6 +413,8 @@ export function useGameLogic() {
 
     // Revised internal handler for when we have the number
     const resolveTurn = (numberVal, colIndex) => {
+        let isDefeat = false;
+
         // Reset Fireball now that ball has landed
         if (fireBallActive) setFireBallActive(false);
         if (magicActive) setMagicActive(false);

@@ -1,0 +1,34 @@
+MVP Release: Bingo Plinko Lucky Machine
+
+Development Phase Complete. This commit solidifies the MVP with the following features and implementations:
+
+1. Core Gameplay
+- Hybrid Bingo-Plinko mechanics: Balls drop through a physics-based peg board (Matter.js) into numbered pipes.
+- Physics Refinements: Adjusted peg density, ball restitution, and gravity for satisfying gameplay.
+- Pipe System: 5 distinct pipes with "Slot Machine" number spinning effects and persistent Bingo letter mapping.
+
+2. Game Logic & Progression
+- Bingo Rules: Balls landing in pipes mark numbers on the Bingo card. 5-in-a-row triggers a Win.
+- Level System: Infinite progression (Levels 1-1000+).
+- Dynamic Difficulty/Rewards: Coin rewards increase per level (100 + Level #).
+- Win/Loss Conditions: "Level Pass" screen on Bingo; "Game Over" on running out of balls.
+- Near Miss System: Logic to assist players when 1 away from Bingo.
+
+3. Power-ups & Economy
+- Coin System: Persistent currency across levels.
+- Magic Number: Allows player to choose the next pipe number.
+- Fireball: Special ball type with visual effects (active > 100 coins).
+- Continue Option: Buy 10 extra balls for 1000 coins on defeat.
+
+4. Visuals & UI/UX
+- Branding: Title set to "Bingo Plinko Lucky Machine".
+- Animations: High-quality SVG vector fire animations on pipes, sparkling particle effects.
+- Modals: "LUCKY!" match notifications and "TRY AGAIN" prompts.
+- Layout: Responsive design, fixed scrollbar issues on Level Pass screen, optimized footer and header alignment.
+- Theming: Gold and Red color palette with "Premium" aesthetic.
+
+5. Technical & Fixes
+- Immediate ball removal logic upon pipe entry.
+- Fixed modal display triggers and timing.
+- Resolved "Magic Number" purchase bugs.
+- White screen/Runtime error fixes in game loops.
