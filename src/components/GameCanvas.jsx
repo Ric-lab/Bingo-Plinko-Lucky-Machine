@@ -92,7 +92,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             const walls = [
                 Bodies.rectangle(-25, height / 2, 50, height * 2, { isStatic: true }),
                 Bodies.rectangle(width + 25, height / 2, 50, height * 2, { isStatic: true }),
-                Bodies.rectangle(width / 2, height + 25, width, 50, { isStatic: true }) // Floor
+                Bodies.rectangle(width / 2, height + 25, width, 50, { isStatic: true, label: 'floor' }) // Floor is now labeled for cleanup
             ];
             Composite.add(engine.world, walls);
 
@@ -218,22 +218,22 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
 
                 // (Ramp logic removed - replaced by Trapezoids above)
 
-                // Sensor (The Trigger) - AT THE MOUTH
-                // Position: Slightly inside the mouth so it looks like it enters.
-                // Previous height-85 was too high (disappeared above rim).
-                // Lowering to height-65.
+                // Sensor (The Trigger) - LARGE CATCHER
+                // Position: Centered lower to ensure capture.
+                // extending from roughly the bottom of the visible pipe down.
                 const pipeX = x + binW / 2;
-                const sensorY = height - 35;
+                const sensorHeight = 100;
+                const sensorY = height - 10; // Centered near bottom
 
                 // CRITICAL FIX: Make Sensor FULL WIDTH of the bin
-                // Previously binW - 20 left gaps. Now using binW + 2 (slight overlap) to ensure capture.
-                const sensor = Bodies.rectangle(pipeX, sensorY, binW + 2, 20, {
+                // Using binW + 2 to slight overlap
+                const sensor = Bodies.rectangle(pipeX, sensorY, binW + 2, sensorHeight, {
                     isStatic: true,
                     isSensor: true, // Specific trigger
                     label: `bin-${i}`, // Encodes the Index: 0, 1, 2, 3, 4
                     render: {
                         visible: false, // Debug: set true to see sensor
-                        fillStyle: 'red'
+                        fillStyle: 'red' // visible for debug
                     }
                 });
                 Composite.add(engine.world, sensor);
@@ -254,6 +254,8 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                     if (bodyA.label.startsWith('bin-')) sensor = bodyA;
                     else if (bodyB.label.startsWith('bin-')) sensor = bodyB;
 
+                    const isFloor = bodyA.label === 'floor' || bodyB.label === 'floor';
+
                     // VALID COLLISION LOGIC
                     if (ball && sensor) {
                         // 1. CRITICAL: Check Duplicate Logic
@@ -273,6 +275,9 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                         }
 
                         // 5. INSTANT REMOVAL (No Fade, No Delay)
+                        Composite.remove(engine.world, ball);
+                    } else if (ball && isFloor) {
+                        // Cleanup on floor hit (if missed sensor)
                         Composite.remove(engine.world, ball);
                     }
                 });

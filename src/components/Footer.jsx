@@ -14,12 +14,12 @@ export default function Footer({ phase, onSpin, onPowerUp, coins }) {
                 onClick={() => onPowerUp('fireball')}
                 className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-105 active:scale-95 transition-all border-b-4 active:border-b-0 active:mt-1 disabled:opacity-50 
                 ${canAffordFireball
-                        ? 'bg-red-600 border-red-800 text-orange-500'
+                        ? 'bg-red-600 border-red-600 text-orange-500'
                         : 'bg-gradient-to-br from-orange-400 to-red-500 border-red-700 text-white grayscale'}
                 `}
                 disabled={phase === 'RESOLVE' || phase === 'GAME_OVER'}
             >
-                <Flame size={28} fill={canAffordFireball ? "#f97316" : "currentColor"} />
+                <Flame size={28} fill={canAffordFireball ? "#ffbb00" : "currentColor"} />
                 <span className="absolute -bottom-2 bg-black/70 text-white text-[10px] px-1 rounded-full font-bold">250</span>
             </button>
 
