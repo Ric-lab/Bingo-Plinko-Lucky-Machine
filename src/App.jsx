@@ -15,7 +15,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 
 export default function App() {
   const {
-    state: { coins, balls, level, bingoCard, slotsResult, isGameOver, winState, phase, fireBallActive, magicActive },
+    state: { coins, balls, level, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive },
     actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel }
   } = useGameLogic();
 
@@ -95,7 +95,7 @@ export default function App() {
         coins={coins}
         balls={balls}
         level={level}
-        onOpenShop={() => console.log('Shop')}
+        // onOpenShop={() => {}} // Placeholder if needed
       />
 
       {/* Bingo Card (Wider: 95%) */}
@@ -144,7 +144,7 @@ export default function App() {
               }
             }
             else if (type === 'magic') setShowMagicModal(true);
-            else console.log('PowerUp', type);
+            // else console.log('PowerUp', type);
           }}
         />
       </div>

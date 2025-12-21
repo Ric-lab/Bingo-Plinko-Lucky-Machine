@@ -6,7 +6,7 @@ const RANGES = {
 };
 
 // CONFIGURATION
-const BALLS_PER_LEVEL = 50;
+const BALLS_PER_LEVEL = 1;
 
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -79,7 +79,6 @@ export function useGameLogic() {
 
     // Initialize Level
     const initLevel = useCallback(() => {
-        console.log("Initializing Level:", level);
         // Generate Numbers per Column first (so we have valid ranges)
         let colsData = [[], [], [], [], []];
         for (let c = 0; c < 5; c++) {
@@ -119,12 +118,10 @@ export function useGameLogic() {
 
     // Setup on mount
     useEffect(() => {
-        console.log("Effect triggered for Level:", level);
         initLevel();
     }, [initLevel]);
 
     const nextLevel = () => {
-        console.log("Next Level Requested");
         setLevel(prev => prev + 1);
         // initLevel will automatically trigger via useEffect because it depends on level
     };
@@ -167,8 +164,6 @@ export function useGameLogic() {
         const availableCols = [0, 1, 2, 3, 4].filter(c => neededByCol[c].length > 0);
 
         // --- MAGIC SPIN OVERRIDE ---
-        let forceCol = -1;
-        let forceNum = -1;
 
         // Check if a specific number is forced (Magic Power-Up)
         // usage: startSpin(numberToForce)
@@ -178,8 +173,6 @@ export function useGameLogic() {
             // Find the column for this number
             const cell = bingoCard.find(c => c.num === magicNumber);
             if (cell) {
-                forceCol = cell.col;
-                forceNum = magicNumber;
                 setMagicActive(true);
             }
         }
@@ -397,7 +390,7 @@ export function useGameLogic() {
     };
 
     // Called when player clicks a slot
-    const dropBall = (colIndex) => {
+    const dropBall = () => {
         if (phase !== 'DROP' || balls <= 0) return false;
 
         setPhase('RESOLVE');
@@ -412,7 +405,7 @@ export function useGameLogic() {
     };
 
     // Revised internal handler for when we have the number
-    const resolveTurn = (numberVal, colIndex) => {
+    const resolveTurn = (numberVal) => {
         let isDefeat = false;
 
         // Reset Fireball now that ball has landed

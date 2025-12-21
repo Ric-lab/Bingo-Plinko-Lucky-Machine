@@ -68,8 +68,6 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             const width = sceneRef.current.clientWidth;
             const height = sceneRef.current.clientHeight;
 
-            console.log(`CANVAS INIT SIZE: ${width}x${height}`);
-
             // Setup Matter JS
             const engine = Engine.create();
             engine.world.gravity.y = 1.2;
@@ -396,7 +394,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             });
 
             // DEBUG: Log all bodies to verify existence
-            console.log("PHYSICS WORLD CREATED. BODIES:", Composite.allBodies(engine.world).map(b => b.label));
+            // console.log("PHYSICS WORLD CREATED. BODIES:", Composite.allBodies(engine.world).map(b => b.label));
 
             Runner.run(Runner.create(), engine);
             Render.run(render);
