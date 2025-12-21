@@ -201,5 +201,7 @@
 @layer base {
     body {
         @apply m-0 p-0 overflow-hidden select-none touch-none;
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior-y: none;
     }
 }

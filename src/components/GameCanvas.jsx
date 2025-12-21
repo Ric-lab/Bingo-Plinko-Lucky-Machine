@@ -107,7 +107,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             // Rows: Adjust count for density. 
             // 16 rows makes it denser and harder.
             const rows = 13;
-            const startY = 80; // Start lower to give space for ball spawn
+            const startY = 25; // Closer to top (Glued to divider)
             const endY = height - 100; // Stop above the funnels
             const gapY = (endY - startY) / (rows - 1);
 
@@ -181,8 +181,8 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                     frictionStatic: 0,
                     render: {
                         fillStyle: '#FF1493',
-                        opacity: 0,           // INVISIBLE
-                        visible: false
+                        opacity: 1,           // INVISIBLE
+                        visible: true
                     },
                     label: 'funnel-internal'
                 };
@@ -196,7 +196,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                     frictionStatic: 0,
                     render: {
                         fillStyle: '#FF1493',
-                        opacity: 0.0,         // INVISIBLE (Handled by UI)
+                        opacity: 0,         // INVISIBLE (Handled by UI)
                         visible: false
                     },
                     label: 'funnel-edge'

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Bingo Plinko Lucky Machine</string>
+    <string name="title_activity_main">Bingo Plinko Lucky Machine</string>
+    <string name="package_name">com.bingoplinko.game</string>
+    <string name="custom_url_scheme">com.bingoplinko.game</string>
+</resources>

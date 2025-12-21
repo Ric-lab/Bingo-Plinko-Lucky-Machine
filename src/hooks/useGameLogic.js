@@ -6,7 +6,7 @@ const RANGES = {
 };
 
 // CONFIGURATION
-const BALLS_PER_LEVEL = 1;
+const BALLS_PER_LEVEL = 50;
 
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;

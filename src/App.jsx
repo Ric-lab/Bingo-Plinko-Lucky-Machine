@@ -95,7 +95,7 @@ export default function App() {
         coins={coins}
         balls={balls}
         level={level}
-        // onOpenShop={() => {}} // Placeholder if needed
+      // onOpenShop={() => {}} // Placeholder if needed
       />
 
       {/* Bingo Card (Wider: 95%) */}
