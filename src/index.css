@@ -199,6 +199,17 @@
 }
 
 @layer base {
+
+    html,
+    body,
+    #root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+
     body {
         @apply m-0 p-0 overflow-hidden select-none touch-none;
         -webkit-tap-highlight-color: transparent;

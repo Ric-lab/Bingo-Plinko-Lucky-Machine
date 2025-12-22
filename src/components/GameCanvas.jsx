@@ -31,8 +31,9 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             // Start center of the chosen column
             const startX = (colIdx * binW) + binW / 2;
 
-            const ball = Bodies.circle(startX, -20, 16, {
-                restitution: isFireBall ? 0.0 : 0.7, // No bounce for fire
+            const ballRadius = width * 0.0275;
+            const ball = Bodies.circle(startX, -20, ballRadius, {
+                restitution: isFireBall ? 0.0 : 0.9, // No bounce for fire
                 friction: isFireBall ? 0 : 0.1,
                 frictionAir: isFireBall ? 0.07 : 0, // Fall slightly steadier?
                 density: 0.25,
@@ -103,10 +104,11 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
 
 
             // Pegs (Aligned Grid)
-            const pegRadius = 7;
+            // Dynamic Peg Radius (Baseline 7px -> larger for impact)
+            const pegRadius = width * 0.020;
             // Rows: Adjust count for density. 
             // 16 rows makes it denser and harder.
-            const rows = 13;
+            const rows = 16;
             const startY = 25; // Closer to top (Glued to divider)
             const endY = height - 100; // Stop above the funnels
             const gapY = (endY - startY) / (rows - 1);
@@ -135,7 +137,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                         const peg = Bodies.circle(px, startY + (r * gapY), pegRadius, {
                             isStatic: true,
                             render: { fillStyle: COLORS.peg },
-                            restitution: 0.5,
+                            restitution: 0.99,
                             label: 'peg'
                         });
                         Composite.add(engine.world, peg);
@@ -149,7 +151,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                         const peg = Bodies.circle(px, startY + (r * gapY), pegRadius, {
                             isStatic: true,
                             render: { fillStyle: COLORS.peg },
-                            restitution: 0.5,
+                            restitution: 0.99,
                             label: 'peg'
                         });
                         Composite.add(engine.world, peg);
@@ -171,7 +173,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                 // But the loop is 0..4 (5 cols).
                 // We can add the Left funnel on i=0. The Right funnel triggers on i=4 (at x+binW).
 
-                const funnelWidth = 40; // Double width (was 20)
+                const funnelWidth = binW * 0.5; // Dynamic width (50% of bin width)
                 const funnelHeight = 90; // Normalized height
 
                 // Standard VISIBLE PINK Funnel (Internal) - DEBUGGING POSITION

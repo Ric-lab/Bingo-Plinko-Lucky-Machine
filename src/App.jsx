@@ -89,7 +89,7 @@ export default function App() {
   };
 
   return (
-    <div className="w-full h-screen bg-gray-50 flex flex-col relative overflow-hidden max-w-md mx-auto shadow-2xl border-x-2 border-gray-200 font-sans select-none">
+    <div className="w-full h-[100dvh] bg-gray-50 flex flex-col relative overflow-hidden md:max-w-md mx-auto shadow-2xl md:border-x-2 border-gray-200 font-sans select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
 
       <Header
         coins={coins}
