@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingCart, Menu, CircleDollarSign, Gamepad2 } from 'lucide-react';
+import { ShoppingCart, Menu, Gamepad2 } from 'lucide-react';
 
 export default function Header({ coins, balls, level, onOpenShop }) {
     return (
@@ -7,7 +7,7 @@ export default function Header({ coins, balls, level, onOpenShop }) {
 
             {/* Left: Coins */}
             <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-full border border-gray-200">
-                <CircleDollarSign size={20} className="text-accent-gold fill-current" />
+                <img src="/Images/Immutable/Coin.png" alt="Coins" className="w-6 h-6 object-contain" />
                 <span className="font-extrabold text-sm text-gray-700">{coins}</span>
             </div>
 

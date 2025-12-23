@@ -6,6 +6,7 @@ import GameCanvas from './components/GameCanvas';
 import BucketRow from './components/BucketRow';
 import Footer from './components/Footer';
 import { useGameLogic } from './hooks/useGameLogic';
+import { useTheme } from './hooks/useTheme';
 
 
 
@@ -18,6 +19,8 @@ export default function App() {
     state: { coins, balls, level, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive },
     actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel }
   } = useGameLogic();
+
+  const { getAsset } = useTheme();
 
   // New Message Modal State
   const [messageModal, setMessageModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
@@ -89,7 +92,14 @@ export default function App() {
   };
 
   return (
-    <div className="w-full h-[100dvh] bg-gray-50 flex flex-col relative overflow-hidden md:max-w-md mx-auto shadow-2xl md:border-x-2 border-gray-200 font-sans select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div
+      className="w-full h-[100dvh] flex flex-col relative overflow-hidden md:max-w-md mx-auto shadow-2xl md:border-x-2 border-gray-200 font-sans select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      style={{
+        backgroundImage: `url(${getAsset('Background.jpg')})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }}
+    >
 
       <Header
         coins={coins}
@@ -99,14 +109,14 @@ export default function App() {
       />
 
       {/* Bingo Card (Wider: 95%) */}
-      <div className="flex-shrink-0 w-full flex justify-center py-2 bg-gradient-to-b from-white to-gray-50 z-10 border-b border-gray-100">
+      <div className="flex-shrink-0 w-full flex justify-center py-2 bg-white/80 backdrop-blur-sm z-10 border-b border-white/20">
         <div className="w-[95%]">
           <BingoCard card={bingoCard} />
         </div>
       </div>
 
       {/* Physics Area + Interactive Pipes */}
-      <div className="flex-1 w-full relative bg-slate-100 overflow-hidden shadow-inner">
+      <div className="flex-1 w-full relative bg-transparent overflow-hidden shadow-inner">
         <div className="absolute inset-0">
           <GameCanvas
             ref={canvasRef}

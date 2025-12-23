@@ -4,7 +4,7 @@ import Matter from 'matter-js';
 const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
 
 const COLORS = {
-    peg: '#8333b1ff',
+    peg: '#eeff00ff',
     ball: '#ff0055ff'
 };
 
@@ -27,16 +27,22 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             if (!engineRef.current || !renderRef.current) return;
 
             const width = renderRef.current.options.width;
-            const binW = width / 5;
+
+            // --- GRID LOGIC ---
+            // Buckets: 5 (Standard)
+            const TOTAL_BINS = 5;
+            const binW = width / TOTAL_BINS;
+
             // Start center of the chosen column
+            // Standard mapping: Col 0 -> 4
             const startX = (colIdx * binW) + binW / 2;
 
-            const ballRadius = width * 0.0275;
+            const ballRadius = width * 0.025;
             const ball = Bodies.circle(startX, -20, ballRadius, {
                 restitution: isFireBall ? 0.0 : 0.9, // No bounce for fire
-                friction: isFireBall ? 0 : 0.1,
+                friction: isFireBall ? 0 : 0,
                 frictionAir: isFireBall ? 0.07 : 0, // Fall slightly steadier?
-                density: 0.25,
+                density: 0.9,
                 render: {
                     fillStyle: isFireBall ? '#ff4d00' : COLORS.ball,
                     strokeStyle: isFireBall ? '#ffae00' : '#fff',
@@ -87,11 +93,12 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             });
             renderRef.current = render;
 
-            // Walls
+            // Walls (Edges of the screen)
+            const wallThick = 60;
             const walls = [
-                Bodies.rectangle(-25, height / 2, 50, height * 2, { isStatic: true }),
-                Bodies.rectangle(width + 25, height / 2, 50, height * 2, { isStatic: true }),
-                Bodies.rectangle(width / 2, height + 25, width, 50, { isStatic: true, label: 'floor' }) // Floor is now labeled for cleanup
+                Bodies.rectangle(-wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-left', friction: 0, restitution: 0.5 }),
+                Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-right', friction: 0, restitution: 0.5 }),
+                Bodies.rectangle(width / 2, height + 25, width, 50, { isStatic: true, label: 'floor' })
             ];
             Composite.add(engine.world, walls);
 
@@ -105,53 +112,52 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
 
             // Pegs (Aligned Grid)
             // Dynamic Peg Radius (Baseline 7px -> larger for impact)
-            const pegRadius = width * 0.020;
+            const pegRadius = width * 0.021;
+            const pegRadiusSmall = width * 0.013; // Smaller for "Odd Columns" (Interleaved)
             // Rows: Adjust count for density. 
             // 16 rows makes it denser and harder.
-            const rows = 16;
+            const rows = 14;
             const startY = 25; // Closer to top (Glued to divider)
             const endY = height - 100; // Stop above the funnels
             const gapY = (endY - startY) / (rows - 1);
 
-            // Unit Width (Matches Bins)
-            const binW = width / 5;
+            // Unit Width
+            const TOTAL_BINS = 5;
+            const binW = width / TOTAL_BINS;
+
+            // PEG DENSITY (Decoupled from Bins)
+            // We want 7 columns of pegs to keep it "tight"
+            const PEG_COLS = 7;
+            const pegSpacing = width / PEG_COLS;
 
             for (let r = 0; r < rows; r++) {
                 const isEven = (r % 2 === 0);
 
                 // Row Logic:
-                // Even Rows: Aligned with Funnels (Edges). 6 Pegs: 0, 1, 2, 3, 4, 5
-                // Odd Rows: Aligned with Bin Centers. 5 Pegs: 0.5, 1.5, 2.5, 3.5, 4.5
+                // Grid driven by PEG_COLS (7), not BINS (5).
 
                 if (isEven) {
-                    // FUNNEL ALIGNED (At the dividers)
-                    // We want pegs at x = 0, binW, 2*binW... 5*binW
-                    for (let c = 0; c <= 5; c++) {
-                        // Skip edges if we want balls to stay in play? 
-                        // Actually, pegs on the wall (0 and Width) might cause jamming or be redundant if we have walls.
-                        // But if we want "On top of triangle", the Side Triangles are at 0 and Width.
-                        // So we should place them, but maybe made them static/visual or just let them be.
-                        // Let's place them for full coverage.
-                        const px = c * binW;
+                    // EDGE ALIGNED (0 to PEG_COLS)
+                    for (let c = 0; c <= PEG_COLS; c++) {
+                        const px = c * pegSpacing;
 
                         const peg = Bodies.circle(px, startY + (r * gapY), pegRadius, {
                             isStatic: true,
                             render: { fillStyle: COLORS.peg },
-                            restitution: 0.99,
+                            restitution: 0.5,
                             label: 'peg'
                         });
                         Composite.add(engine.world, peg);
                     }
                 } else {
-                    // CENTER ALIGNED (Between dividers)
-                    // We want pegs at x = binW/2, 1.5*binW...
-                    for (let c = 0; c < 5; c++) {
-                        const px = (c * binW) + (binW / 2);
+                    // CENTER ALIGNED
+                    for (let c = 0; c < PEG_COLS; c++) {
+                        const px = (c * pegSpacing) + (pegSpacing / 2);
 
-                        const peg = Bodies.circle(px, startY + (r * gapY), pegRadius, {
+                        const peg = Bodies.circle(px, startY + (r * gapY), pegRadiusSmall, {
                             isStatic: true,
                             render: { fillStyle: COLORS.peg },
-                            restitution: 0.99,
+                            restitution: 1.8,
                             label: 'peg'
                         });
                         Composite.add(engine.world, peg);
@@ -159,13 +165,14 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                 }
             }
 
-            // Physical Separators for Buckets
-            // binW is already defined above
-            const wallThick = 4;
-            const bucketHeight = 60; // Physical height of separators
+            // Physical Separators & Sensors
+            // These must MATCH THE VISUAL BUCKETS (5 Cols)
 
-            for (let i = 0; i < 5; i++) {
-                const x = i * binW;
+            const bucketHeight = 60;
+
+            for (let i = 0; i < TOTAL_BINS; i++) {
+                // i = 0..4
+                const x = i * binW; // Left edge of this bin
 
                 // Separators (Walls/Funnels between columns)
                 // NOW INCLUDING EDGES (i=0 to 5) to handle "side gaps"
@@ -183,37 +190,25 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                     frictionStatic: 0,
                     render: {
                         fillStyle: '#FF1493',
-                        opacity: 1,           // INVISIBLE
-                        visible: true
-                    },
-                    label: 'funnel-internal'
-                };
-
-                // White Visible Funnel (Edges)
-                // MOVED TO UI (BucketRow.jsx) for Z-Index visibility.
-                // Keeping physics body but making invisible.
-                const edgeOptions = {
-                    isStatic: true,
-                    friction: 0,
-                    frictionStatic: 0,
-                    render: {
-                        fillStyle: '#FF1493',
-                        opacity: 0,         // INVISIBLE (Handled by UI)
+                        opacity: 0,           // INVISIBLE
                         visible: false
                     },
-                    label: 'funnel-edge'
+                    label: 'funnel-internal',
+                    restitution: 0.5 // Bouncy tip
                 };
+
+
 
                 // 1. Funnel on the LEFT of the current bin (at x)
                 // This covers:
                 // i=0: Left Wall (x=0)
                 // i=1..4: Internal Dividers
-                Composite.add(engine.world, Bodies.trapezoid(x, height - 33, 40, funnelHeight, 1, internalOptions));
+                Composite.add(engine.world, Bodies.trapezoid(x, height - 20, 40, funnelHeight, 1, internalOptions));
 
                 // 2. Funnel on the RIGHT of the LAST bin (at x + binW)
                 // This covers: Right Wall (x=width)
                 if (i === 4) {
-                    Composite.add(engine.world, Bodies.trapezoid(x + binW, height - 33, 40, funnelHeight, 1, internalOptions));
+                    Composite.add(engine.world, Bodies.trapezoid(x + binW, height - 20, 40, funnelHeight, 1, internalOptions));
                 }
 
                 // (Ramp logic removed - replaced by Trapezoids above)

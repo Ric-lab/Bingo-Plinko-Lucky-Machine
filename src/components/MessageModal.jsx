@@ -133,9 +133,7 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
                             <span className="text-white font-black text-6xl drop-shadow-[0_3px_3px_rgba(0,0,0,0.8)] stroke-black tracking-widest">
                                 {message.replace('+', '').replace('🟡', '')}
                             </span>
-                            <span className="text-yellow-300 drop-shadow-[0_0_5px_rgba(255,215,0,0.8)] text-5xl">
-                                🟡
-                            </span>
+                            <img src="/Images/Immutable/Coin.png" alt="Coin" className="w-12 h-12 object-contain drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]" />
                         </div>
                     )}
                 </div>

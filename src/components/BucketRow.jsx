@@ -173,6 +173,7 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
     };
 
     return (
+        // Back to Standard Full Width
         <div className="absolute bottom-0 left-0 right-0 h-[90px] flex items-end justify-between w-full px-0 z-20 pointer-events-auto">
             {slotsResult.map((num, i) => {
                 const isUseful = checkIsUseful(num);
