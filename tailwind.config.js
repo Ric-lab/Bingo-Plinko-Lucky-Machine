@@ -15,7 +15,7 @@ export default {
         'text-dark': '#3e2723',
       },
       fontFamily: {
-        'sans': ['Fredoka', 'sans-serif'],
+        'sans': ['"Luckiest Guy"', 'cursive'],
       }
     },
   },

@@ -109,7 +109,7 @@ export default function App() {
       />
 
       {/* Bingo Card (Wider: 95%) */}
-      <div className="flex-shrink-0 w-full flex justify-center py-2 bg-white/80 backdrop-blur-sm z-10 border-b border-white/20">
+      <div className="flex-shrink-0 w-full flex justify-center py-2  backdrop-blur-sm z-10 border-b border-white/20">
         <div className="w-[95%]">
           <BingoCard card={bingoCard} />
         </div>
@@ -144,6 +144,7 @@ export default function App() {
         <Footer
           phase={phase}
           coins={coins}
+          balls={balls}
           onSpin={startSpin}
           onPowerUp={(type) => {
             if (type === 'fireball') {

@@ -137,7 +137,7 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
 // --- DISTRIBUTED FIRE CONTAINER ---
 const DistributedFire = () => {
     return (
-        <div className="absolute bottom-[3.3rem] left-0 right-0 z-0 pointer-events-none h-32 overflow-visible flex justify-center items-end">
+        <div className="absolute bottom-[-20px] left-0 right-0 z-0 pointer-events-none h-32 overflow-visible flex justify-center items-end">
             {/* Container logic: 
                 - left-0 right-0 ensures full width 
                 - flex justify-center ensures 0% xOffset is visually center
@@ -174,7 +174,7 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
 
     return (
         // Back to Standard Full Width
-        <div className="absolute bottom-0 left-0 right-0 h-[90px] flex items-end justify-between w-full px-0 z-20 pointer-events-auto">
+        <div className="absolute bottom-0 left-0 right-0 h-[70px] flex items-end justify-between w-full px-0 z-20 pointer-events-auto">
             {slotsResult.map((num, i) => {
                 const isUseful = checkIsUseful(num);
                 const theme = PIPE_COLORS[i];
@@ -191,11 +191,13 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
                 let bodyClasses = '';
 
                 if (showGold) {
-                    rimClasses = 'bg-yellow-300 border-yellow-400';
-                    bodyClasses = 'bg-gradient-to-b from-yellow-200 to-yellow-300 border-yellow-500 text-yellow-800 scale-105 z-10';
+                    // Golden Text only (box is invisible)
+                    rimClasses = 'opacity-0';
+                    bodyClasses = 'bg-transparent text-yellow-300 font-black drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] scale-110 z-10';
                 } else {
-                    rimClasses = `${theme.rim} border-white/20`;
-                    bodyClasses = `${theme.base} border-${theme.hue}-700 text-white`;
+                    // Normal Text only (box is invisible)
+                    rimClasses = 'opacity-0';
+                    bodyClasses = 'bg-transparent text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]';
                 }
 
                 return (
@@ -218,12 +220,11 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
 
                         {/* Pipe Body (Bottom) - Solid & Opaque */}
                         <div className={`
-                 w-[80%] h-14 border-x-2 border-b-2 border-black/10 shadow-xl flex items-center justify-center transition-all duration-200 relative overflow-hidden
+                 w-[80%] h-14 flex items-center justify-center pb-3 transition-all duration-200 relative overflow-visible
                  ${bodyClasses}
-                 ${(phase === 'DROP' || isFireTarget) ? 'group-hover:brightness-110 active:scale-95 cursor-pointer' : 'brightness-95 cursor-default'}
+                 ${(phase === 'DROP' || isFireTarget) ? 'group-hover:scale-110 active:scale-95 cursor-pointer' : 'cursor-default'}
              `}>
-                            {/* Texture/Highlight */}
-                            <div className="absolute left-1 top-0 bottom-0 w-2 bg-white/20 blur-[1px]" />
+                            {/* Texture/Highlight REMOVED */}
 
                             {phase === 'SPINNING' ? (
                                 <RollingSlot

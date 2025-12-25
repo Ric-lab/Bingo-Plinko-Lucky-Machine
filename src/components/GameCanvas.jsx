@@ -1,7 +1,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import Matter from 'matter-js';
 
-const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
+const { Engine, Render, Runner, Bodies, Body, Composite, Events, Vector } = Matter;
 
 const COLORS = {
     peg: '#eeff00ff',
@@ -30,23 +30,52 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
 
             // --- GRID LOGIC ---
             // Buckets: 5 (Standard)
-            const TOTAL_BINS = 5;
-            const binW = width / TOTAL_BINS;
+            // const TOTAL_BINS = 5; // Unused for drop logic now
 
-            // Start center of the chosen column
-            // Standard mapping: Col 0 -> 4
-            const startX = (colIdx * binW) + binW / 2;
+            // PEG DENSITY (Decoupled from Bins)
+            // We want 7 columns of pegs to keep it "tight"
+            const PEG_COLS = 7;
+            const pegSpacing = width / PEG_COLS;
 
-            const ballRadius = width * 0.025;
+            // FIXED DROP POINTS (B-I-N-G-O)
+            // User requested specific alignment:
+            // B (0) -> Col 1 (2nd small peg row)
+            // I (1) -> Col 2 (3rd small peg row)
+            // N (2) -> Col 3 (4th small peg row - Center)
+            // G (3) -> Col 4 (5th small peg row)
+            // O (4) -> Col 5 (6th small peg row)
+
+            let startX;
+
+            if (isFireBall) {
+                // FIREBALL: Perfect Center of the Bin (Advantage)
+                const TOTAL_BINS = 5;
+                const binW = width / TOTAL_BINS;
+                startX = (colIdx * binW) + (binW / 2);
+            } else {
+                // NORMAL BALL: Aligned to specific Peg Columns (Challenge)
+                // Map colIdx (0-4) to Peg Column Index (1-5)
+                const targetPegCol = colIdx + 1;
+                // Start center of the chosen PEG column
+                startX = (targetPegCol * pegSpacing) + (pegSpacing / 2);
+            }
+
+            const ballRadius = width * 0.030;
             const ball = Bodies.circle(startX, -20, ballRadius, {
-                restitution: isFireBall ? 0.0 : 0.9, // No bounce for fire
-                friction: isFireBall ? 0 : 0,
-                frictionAir: isFireBall ? 0.07 : 0, // Fall slightly steadier?
-                density: 0.9,
-                render: {
-                    fillStyle: isFireBall ? '#ff4d00' : COLORS.ball,
-                    strokeStyle: isFireBall ? '#ffae00' : '#fff',
-                    lineWidth: isFireBall ? 4 : 2
+                restitution: isFireBall ? 0.0 : 0.75, // Less bouncy (heavier feel)
+                friction: isFireBall ? 0 : 0.005,
+                frictionAir: isFireBall ? 0.07 : 0.01, // Lower resistance for better glide
+                density: 1.5, // Heavier mass
+                render: isFireBall ? {
+                    fillStyle: '#ff4d00',
+                    strokeStyle: '#ffae00',
+                    lineWidth: 4
+                } : {
+                    sprite: {
+                        texture: '/Images/Standard/ball.png',
+                        xScale: (ballRadius * 2) / 128, // Image is now 128px
+                        yScale: (ballRadius * 2) / 128
+                    }
                 },
                 label: isFireBall ? 'fireball' : 'player-ball',
                 isSensor: isFireBall // FIREBALL IGNORES ALL COLLISIONS (But triggers events)
@@ -96,8 +125,8 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
             // Walls (Edges of the screen)
             const wallThick = 60;
             const walls = [
-                Bodies.rectangle(-wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-left', friction: 0, restitution: 0.5 }),
-                Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-right', friction: 0, restitution: 0.5 }),
+                Bodies.rectangle(-wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-left', friction: 0, restitution: 1.3 }),
+                Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-right', friction: 0, restitution: 1.3 }),
                 Bodies.rectangle(width / 2, height + 25, width, 50, { isStatic: true, label: 'floor' })
             ];
             Composite.add(engine.world, walls);
@@ -143,8 +172,14 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
 
                         const peg = Bodies.circle(px, startY + (r * gapY), pegRadius, {
                             isStatic: true,
-                            render: { fillStyle: COLORS.peg },
-                            restitution: 0.5,
+                            render: {
+                                sprite: {
+                                    texture: '/Images/Standard/peg.png',
+                                    xScale: (pegRadius * 2) / 64, // Assume 64px image
+                                    yScale: (pegRadius * 2) / 64
+                                }
+                            },
+                            restitution: 0.9,
                             label: 'peg'
                         });
                         Composite.add(engine.world, peg);
@@ -156,8 +191,14 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
 
                         const peg = Bodies.circle(px, startY + (r * gapY), pegRadiusSmall, {
                             isStatic: true,
-                            render: { fillStyle: COLORS.peg },
-                            restitution: 1.8,
+                            render: {
+                                sprite: {
+                                    texture: '/Images/Standard/peg.png',
+                                    xScale: (pegRadiusSmall * 2) / 64,
+                                    yScale: (pegRadiusSmall * 2) / 64
+                                }
+                            },
+                            restitution: 1.5,
                             label: 'peg'
                         });
                         Composite.add(engine.world, peg);
@@ -167,6 +208,25 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
 
             // Physical Separators & Sensors
             // These must MATCH THE VISUAL BUCKETS (5 Cols)
+
+            // VISUAL DEBUG MARKERS (DROP POINTS)
+            // Show where the balls will drop for B-I-N-G-O (Inputs 0-4)
+            for (let i = 0; i < 5; i++) {
+                const targetPegCol = i + 1; // Map 0..4 -> 1..5
+                const markerX = (targetPegCol * pegSpacing) + (pegSpacing / 2);
+                const markerY = 10; // Very top
+
+                const marker = Bodies.circle(markerX, markerY, 5, {
+                    isStatic: true,
+                    isSensor: true, // Ghost (no collision)
+                    label: `drop-marker-${i}`,
+                    render: {
+                        fillStyle: '#00ff00', // Bright Green
+                        opacity: 0.8
+                    }
+                });
+                Composite.add(engine.world, marker);
+            }
 
             const bucketHeight = 60;
 
@@ -183,15 +243,17 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                 const funnelWidth = binW * 0.5; // Dynamic width (50% of bin width)
                 const funnelHeight = 90; // Normalized height
 
-                // Standard VISIBLE PINK Funnel (Internal) - DEBUGGING POSITION
+                // Standard VISIBLE Funnel (Internal) - DEBUGGING POSITION
                 const internalOptions = {
                     isStatic: true,
                     friction: 0,
                     frictionStatic: 0,
                     render: {
-                        fillStyle: '#FF1493',
-                        opacity: 0,           // INVISIBLE
-                        visible: false
+                        sprite: {
+                            texture: '/Images/Standard/triangle.png',
+                            xScale: 40 / 80, // Target 40px width. Adjust if image is not 80px.
+                            yScale: 90 / 180 // Target 90px height. Adjust if image is not 180px.
+                        }
                     },
                     label: 'funnel-internal',
                     restitution: 0.5 // Bouncy tip
@@ -217,8 +279,8 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                 // Position: Centered lower to ensure capture.
                 // extending from roughly the bottom of the visible pipe down.
                 const pipeX = x + binW / 2;
-                const sensorHeight = 100;
-                const sensorY = height - 10; // Centered near bottom
+                const sensorHeight = 10; // Thin sensor at the very bottom
+                const sensorY = height - 5; // Glued to the bottom edge (height - 10/2) -> Bottom at height
 
                 // CRITICAL FIX: Make Sensor FULL WIDTH of the bin
                 // Using binW + 2 to slight overlap
@@ -250,6 +312,31 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                     else if (bodyB.label.startsWith('bin-')) sensor = bodyB;
 
                     const isFloor = bodyA.label === 'floor' || bodyB.label === 'floor';
+                    const peg = (bodyA.label === 'peg' ? bodyA : (bodyB.label === 'peg' ? bodyB : null));
+
+                    // ACTIVE BUMPER LOGIC
+                    if (ball && peg) {
+                        // Calculate vector from peg to ball
+                        const normal = Vector.normalise(Vector.sub(ball.position, peg.position));
+                        // Apply active force (Kick)
+                        // Adjust magnitude to taste. 0.05 is significant for this size.
+                        const force = Vector.mult(normal, 0.05);
+                        Body.applyForce(ball, ball.position, force);
+                    }
+
+                    // ACTIVE WALL KICK (Keep it in the center!)
+                    if (ball) {
+                        const hitLeft = (bodyA.label === 'wall-left' || bodyB.label === 'wall-left');
+                        const hitRight = (bodyA.label === 'wall-right' || bodyB.label === 'wall-right');
+
+                        if (hitLeft) {
+                            // Kick RIGHT
+                            Body.applyForce(ball, ball.position, { x: 0.15, y: -0.05 }); // Slight lift too
+                        } else if (hitRight) {
+                            // Kick LEFT
+                            Body.applyForce(ball, ball.position, { x: -0.15, y: -0.05 }); // Slight lift too
+                        }
+                    }
 
                     // VALID COLLISION LOGIC
                     if (ball && sensor) {
@@ -269,11 +356,16 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                             onBallLandedRef.current(binIdx);
                         }
 
-                        // 5. INSTANT REMOVAL (No Fade, No Delay)
-                        Composite.remove(engine.world, ball);
+                        // 5. DELAYED REMOVAL (Let user see it land)
+                        setTimeout(() => {
+                            Composite.remove(engine.world, ball);
+                        }, 1000); // 2.0s delay (User requested longer time)
                     } else if (ball && isFloor) {
-                        // Cleanup on floor hit (if missed sensor)
-                        Composite.remove(engine.world, ball);
+                        // Cleanup on floor hit (ONLY if missed sensor)
+                        // If it hit the sensor, it's in processedBalls, so we let the timeout handle it.
+                        if (!processedBalls.current.has(ball.id)) {
+                            Composite.remove(engine.world, ball);
+                        }
                     }
                 });
             });
