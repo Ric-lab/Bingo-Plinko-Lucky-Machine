@@ -11,7 +11,9 @@ export default function ConfirmationModal({
     cancelLabel = "Cancel",
     Icon = HelpCircle,
     colorTheme = "indigo", // indigo, red, green, etc.
-    showCancel = true
+    showCancel = true,
+    secondaryAction = null,
+    secondaryLabel = "Secondary"
 }) {
     if (!isOpen) return null;
 
@@ -70,15 +72,27 @@ export default function ConfirmationModal({
                         </p>
                     </div>
 
-                    <div className="w-full mt-4">
+                    <div className="w-full mt-4 flex flex-col gap-3">
                         {showCancel && (
                             <button
                                 onClick={onClose}
-                                className="flex-1 py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 shadow-sm transition-transform active:scale-95 mr-3"
+                                className="w-full py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 shadow-sm transition-transform active:scale-95"
                             >
                                 {cancelLabel}
                             </button>
                         )}
+
+                        {secondaryAction && (
+                            <button
+                                onClick={() => {
+                                    secondaryAction();
+                                }}
+                                className="w-full py-3 rounded-xl font-bold text-white bg-blue-500 hover:bg-blue-600 shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                {secondaryLabel}
+                            </button>
+                        )}
+
                         <button
                             onClick={() => {
                                 onConfirm();

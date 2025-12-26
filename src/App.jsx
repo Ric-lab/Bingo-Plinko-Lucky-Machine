@@ -10,9 +10,12 @@ import { useTheme } from './hooks/useTheme';
 
 
 
-import MagicNumberModal from './components/MagicNumberModal';
-import MessageModal from './components/MessageModal';
-import ConfirmationModal from './components/ConfirmationModal';
+import MagicNumberModal from './components/Modal/MagicNumberModal';
+import MessageModal from './components/Modal/MessageModal';
+// import ConfirmationModal from './components/Modal/ConfirmationModal'; // Removed as it was only used for Fireball
+import GameOverModal from './components/Modal/GameOverModal';
+import NextLevelModal from './components/Modal/NextLevelModal';
+import FireballModal from './components/Modal/FireballModal';
 
 export default function App() {
   const {
@@ -55,20 +58,14 @@ export default function App() {
     }
   };
 
-  const handleMagicConfirm = (number) => {
+  const handleMagicSpin = (number, cost) => {
     // 1. Transaction
-    if (buyItem('magic', 500)) {
+    if (buyItem('magic', cost)) {
       // 2. Force Spin
-      startSpin(number); // Logic updated to accept this arg
-      // 3. Close
-      // 3. Close
-      setShowMagicModal(false);
-      // 4. Feedback (Removed specific success modal as requested)
-      // showMessage('success', 'Magic Activated!', `Number ${number} guarantees a win!`);
-    } else {
-      // Error feedback
-      showMessage('error', 'Oops!', 'Not enough coins to buy Magic!');
+      startSpin(number);
+      // 3. Close & Feedback handled by component
     }
+    // Error handled by modal
   };
 
   const handleBallLanded = (binIndex) => {
@@ -78,8 +75,8 @@ export default function App() {
     // Trigger Feedback
     if (result) {
       if (result.hit) {
-        // Show "LUCK!" only if NOT a Bingo (Game Over handles the celebration)
-        if (!result.hasBingo) {
+        // Show "LUCK!" only if game continues (Not Bingo AND Not Defeat)
+        if (!result.hasBingo && !result.isDefeat) {
           showMessage('celebration', 'LUCKY!', `+${result.earned}🟡`, 1750);
         }
       } else {
@@ -148,11 +145,7 @@ export default function App() {
           onSpin={startSpin}
           onPowerUp={(type) => {
             if (type === 'fireball') {
-              if (coins >= 250) {
-                setShowFireballConfirm(true);
-              } else {
-                showMessage('error', 'Oops!', 'Not enough coins for Fireball!');
-              }
+              setShowFireballConfirm(true);
             }
             else if (type === 'magic') setShowMagicModal(true);
             // else console.log('PowerUp', type);
@@ -163,30 +156,18 @@ export default function App() {
       <MagicNumberModal
         isOpen={showMagicModal}
         onClose={() => setShowMagicModal(false)}
-        onConfirm={handleMagicConfirm}
+        coins={coins}
+        onMagicSpin={handleMagicSpin}
+        showMessage={showMessage}
         bingoCard={bingoCard}
       />
 
-      <ConfirmationModal
+      <FireballModal
         isOpen={showFireballConfirm}
         onClose={() => setShowFireballConfirm(false)}
-        onConfirm={() => {
-          buyItem('fireball', 250);
-          // showMessage('success', 'Fireball Ready!', 'Next drop will be flaming hot!');
-        }}
-        title="Fireball"
-        message="Spend 250 coins to heat up the next drop?"
-        confirmLabel={
-          <>
-            <span>CONFIRM</span>
-            <span className="bg-black/20 px-2 py-0.5 rounded text-sm font-bold flex items-center gap-1">
-              -250 🟡
-            </span>
-          </>
-        }
-        colorTheme="fireball"
-        Icon={Flame}
-        showCancel={false}
+        coins={coins}
+        buyItem={buyItem}
+        showMessage={showMessage}
       />
 
       <MessageModal
@@ -197,79 +178,21 @@ export default function App() {
         message={messageModal.message}
       />
 
-      {/* Game Over Modal */}
-      {(phase === 'GAME_OVER') && (
-        <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center flex-col text-white animate-fade-in p-4 text-center overflow-hidden w-full h-full">
-
-          {/* Festive Background Elements */}
-          {winState && (
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute top-10 left-10 text-6xl animate-bounce">🎉</div>
-              <div className="absolute top-20 right-20 text-6xl animate-pulse">✨</div>
-              <div className="absolute bottom-10 left-20 text-6xl animate-spin-slow">🎈</div>
-              <div className="absolute bottom-30 right-10 text-6xl animate-bounce delay-100">🎊</div>
-            </div>
-          )}
-
-          <h1 className="text-5xl font-extrabold mb-3 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] animate-scale-pulse">
-            {winState ? 'BINGO!!!' : 'GAME OVER'}
-          </h1>
-
-          <div className="mb-6 space-y-2">
-            <p className="text-xl text-gray-200 font-bold">
-              {winState ? '🎉 LEVEL COMPLETE! 🎉' : 'Out of balls!'}
-            </p>
-            {winState && (
-              <div className="bg-gradient-to-r from-yellow-600 to-yellow-800 text-white px-8 py-2 rounded-xl border-2 border-yellow-400 shadow-[0_0_20px_rgba(255,215,0,0.5)] animate-bounce">
-                <p className="text-2xl font-black tracking-wider">REWARD: +{100 + level} 🟡</p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-4 w-full max-w-xs px-4">
-            {/* CONTINUE OPTION (Only on Defeat) */}
-            {!winState && (
-              <button
-                onClick={() => {
-                  if (coins >= 1000) {
-                    buyItem('continue', 1000);
-                  } else {
-                    // Alert
-                    showMessage('error', 'Oops!', 'Not enough coins to Continue!');
-                  }
-                }}
-                disabled={coins < 1000}
-                className={`group relative px-6 py-3 rounded-full font-black text-xl shadow-xl transition-all border-4 border-white/30 ${coins >= 1000 ? 'bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 cursor-pointer shadow-[0_5px_0_rgb(29,78,216)] active:translate-y-[5px] active:shadow-none' : 'bg-gray-500 opacity-50 cursor-not-allowed'}`}
-              >
-                <span className="drop-shadow-md flex flex-col items-center leading-none">
-                  <span>CONTINUE (+10 BALLS)</span>
-                  <span className="text-sm text-yellow-300">1000 🟡</span>
-                </span>
-                {coins >= 1000 && (
-                  <div className="absolute inset-0 rounded-full bg-white/20 skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                )}
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                if (winState) {
-                  nextLevel();
-                } else {
-                  initLevel(); // Just restart same level
-                }
-              }}
-              className={`group relative bg-gradient-to-b px-6 py-3.5 rounded-full font-black text-2xl shadow-xl transition-all border-4 border-white/30 ${winState ? 'from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 shadow-[0_5px_0_rgb(21,128,61)]' : 'from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 shadow-[0_5px_0_rgb(185,28,28)]'} active:shadow-none active:translate-y-[5px]`}
-            >
-              <span className="drop-shadow-md">
-                {winState ? 'NEXT LEVEL ➡️' : 'GIVE UP & RESTART ↺'}
-              </span>
-
-              {/* Button Shine Effect */}
-              <div className="absolute inset-0 rounded-full bg-white/20 skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-            </button>
-          </div>
-        </div>
+      {/* Game Over / Next Level Logic */}
+      {phase === 'GAME_OVER' && (
+        winState ? (
+          <NextLevelModal
+            level={level}
+            onNextLevel={nextLevel}
+          />
+        ) : (
+          <GameOverModal
+            coins={coins}
+            onRestart={initLevel}
+            buyItem={buyItem}
+            showMessage={showMessage}
+          />
+        )
       )}
     </div>
   );

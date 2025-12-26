@@ -6,7 +6,7 @@ const RANGES = {
 };
 
 // CONFIGURATION
-const BALLS_PER_LEVEL = 50;
+const BALLS_PER_LEVEL = 1;
 
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -435,15 +435,21 @@ export function useGameLogic() {
 
             const hasBingo = checkBingo(newCard); // NEW check
             if (hasBingo) {
-                setWinState(true);
-                setIsGameOver(true);
-                setPhase('GAME_OVER');
-                setCoins(prev => prev + (100 + level)); // REWARD 100 + Level COINS
-            } else {
-                // If NO Bingo, we must still check if we are out of balls
-                if (balls <= 0) {
+                // VICTORY - Add Delay
+                setTimeout(() => {
+                    setWinState(true);
                     setIsGameOver(true);
                     setPhase('GAME_OVER');
+                    setCoins(prev => prev + (100 + level)); // REWARD 100 + Level COINS
+                }, 750);
+            } else {
+                // If LOSE / NO Bingo, we must still check if we are out of balls
+                if (balls <= 0) {
+                    // DEFEAT - Add Delay
+                    setTimeout(() => {
+                        setIsGameOver(true);
+                        setPhase('GAME_OVER');
+                    }, 750);
                     isDefeat = true;
                 } else {
                     // Back to SPIN
@@ -456,8 +462,11 @@ export function useGameLogic() {
             // Check balls for defeat
             if (balls <= 0) {
                 if (!winState) { // Should be covered, but safety check
-                    setIsGameOver(true);
-                    setPhase('GAME_OVER');
+                    // DEFEAT - Add Delay
+                    setTimeout(() => {
+                        setIsGameOver(true);
+                        setPhase('GAME_OVER');
+                    }, 750);
                     isDefeat = true;
                 }
             } else {
