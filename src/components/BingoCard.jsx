@@ -42,29 +42,41 @@ export default function BingoCard({ card, level }) {
                                 key={cell.id}
                                 className={`
                       h-8 flex items-center justify-center rounded-md font-bold text-xl tracking-widest shadow-sm border transition-all duration-300 relative overflow-hidden
-                      ${cell.marked
-                                        ? 'bg-amber-200 border-amber-500 text-amber-900 ring-2 ring-amber-300 scale-105 z-10 shadow-lg'
-                                        : `${theme.bg} ${theme.text} ${theme.border} bg-white hover:brightness-95`}
+                      ${cell.num === 'FREE'
+                                        ? 'bg-transparent border-transparent shadow-none'
+                                        : cell.marked
+                                            ? 'bg-amber-200 border-amber-500 text-amber-900 ring-2 ring-amber-300 scale-105 z-10 shadow-lg'
+                                            : `${theme.bg} ${theme.text} ${theme.border} bg-white hover:brightness-95`}
                     `}
                             >
                                 {/* Content - Fade out number slightly when marked to let checkmark shine */}
-                                <span className={`transition-opacity duration-300 ${cell.marked ? 'opacity-30 blur-[0.5px]' : ''}`}>
-                                    {cell.num === 'FREE' ? '★' : cell.num}
+                                <span className={`transition-opacity duration-300 ${cell.marked && cell.num !== 'FREE' ? 'opacity-30 blur-[0.5px]' : ''} flex items-center justify-center w-full h-full`}>
+                                    {cell.num === 'FREE' ? (
+                                        <img
+                                            src="/Images/Immutable/stamp.png"
+                                            alt="Free Space"
+                                            className="w-8 h-8 object-contain opacity-100"
+                                        />
+                                    ) : (
+                                        cell.num
+                                    )}
                                 </span>
 
                                 {/* Checkmark Overlay */}
-                                {cell.marked && (
-                                    <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in duration-300 z-20">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-emerald-600 drop-shadow-md filter stroke-2 stroke-white">
-                                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                )}
+                                {
+                                    cell.marked && cell.num !== 'FREE' && (
+                                        <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in duration-300 z-20">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-emerald-600 drop-shadow-md filter stroke-2 stroke-white">
+                                                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                    )
+                                }
                             </div>
                         );
                     })}
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
