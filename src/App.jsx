@@ -16,6 +16,7 @@ import MessageModal from './components/Modal/MessageModal';
 import GameOverModal from './components/Modal/GameOverModal';
 import NextLevelModal from './components/Modal/NextLevelModal';
 import FireballModal from './components/Modal/FireballModal';
+import ShopModal from './components/Modal/ShopModal';
 
 export default function App() {
   const {
@@ -30,6 +31,7 @@ export default function App() {
 
   const [showMagicModal, setShowMagicModal] = useState(false);
   const [showFireballConfirm, setShowFireballConfirm] = useState(false);
+  const [showShopModal, setShowShopModal] = useState(false);
 
   // Helper to show modal
   const showMessage = (type, title, message, autoCloseDuration = 0) => {
@@ -102,18 +104,18 @@ export default function App() {
         coins={coins}
         balls={balls}
         level={level}
-      // onOpenShop={() => {}} // Placeholder if needed
+        onOpenShop={() => setShowShopModal(true)}
       />
 
       {/* Bingo Card (Wider: 95%) */}
-      <div className="flex-shrink-0 w-full flex justify-center py-2  backdrop-blur-sm z-10 border-b border-white/20">
+      <div className="flex-shrink-0 w-full flex justify-center pb-0 bg-white/10 backdrop-blur-md z-10 border-b border-white/20">
         <div className="w-[95%]">
-          <BingoCard card={bingoCard} />
+          <BingoCard card={bingoCard} level={level} />
         </div>
       </div>
 
       {/* Physics Area + Interactive Pipes */}
-      <div className="flex-1 w-full relative bg-transparent overflow-hidden shadow-inner">
+      <div className="flex-1 w-full relative bg-transparent overflow-hidden shadow-inner mt-[10px]">
         <div className="absolute inset-0">
           <GameCanvas
             ref={canvasRef}
@@ -178,6 +180,7 @@ export default function App() {
         message={messageModal.message}
       />
 
+
       {/* Game Over / Next Level Logic */}
       {phase === 'GAME_OVER' && (
         winState ? (
@@ -194,6 +197,13 @@ export default function App() {
           />
         )
       )}
+
+      {/* Shop Modal */}
+      <ShopModal
+        isOpen={showShopModal}
+        onClose={() => setShowShopModal(false)}
+        buyItem={buyItem}
+      />
     </div>
   );
 }

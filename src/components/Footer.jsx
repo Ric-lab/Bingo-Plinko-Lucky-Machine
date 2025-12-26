@@ -8,7 +8,7 @@ export default function Footer({ phase, onSpin, onPowerUp, coins, balls }) {
 
     return (
         <div
-            className="w-full h-[80px] border-t border-gray-200 flex items-center justify-between px-4 pb-2 pt-2 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex-shrink-0"
+            className="w-full h-[80px] border-t border-gray-200 flex items-center justify-between px-4 pt-2 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex-shrink-0"
             style={{
                 backgroundImage: "url('/Images/Standard/footerbg.png')",
                 backgroundSize: '100% 100%',
@@ -20,17 +20,17 @@ export default function Footer({ phase, onSpin, onPowerUp, coins, balls }) {
             {/* Fireball (Asset) */}
             <button
                 onClick={() => onPowerUp('fireball')}
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-105 active:scale-95 transition-all border-b-4 active:border-b-0 active:mt-1 disabled:opacity-50 overflow-hidden
+                className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 active:mt-1 transition-all disabled:opacity-50 overflow-hidden p-1
                 ${canAffordFireball
-                        ? 'bg-red-500 border-red-800'
-                        : 'bg-gray-700 border-gray-800 grayscale'}
+                        ? 'hover:brightness-110'
+                        : 'bg-gray-700 grayscale'}
                 `}
                 disabled={phase === 'RESOLVE' || phase === 'GAME_OVER'}
             >
                 <img
                     src="/Images/Standard/fireball.png"
                     alt="Fireball"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                 />
             </button>
 
@@ -58,17 +58,17 @@ export default function Footer({ phase, onSpin, onPowerUp, coins, balls }) {
             {/* Magic (Asset) */}
             <button
                 onClick={() => onPowerUp('magic')}
-                className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transform hover:scale-105 active:scale-95 transition-all border-b-4 active:border-b-0 active:mt-1 disabled:opacity-50 overflow-hidden
+                className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 active:mt-1 transition-all disabled:opacity-50 overflow-hidden p-1.5 mb-0.5
                 ${canAffordMagic
-                        ? 'bg-indigo-600 border-indigo-800'
-                        : 'bg-gray-700 border-gray-800 grayscale'}
+                        ? 'hover:brightness-110'
+                        : 'bg-gray-700 grayscale'}
                 `}
                 disabled={phase === 'RESOLVE' || phase === 'GAME_OVER'}
             >
                 <img
                     src="/Images/Standard/magicnumber.png"
                     alt="Magic Number"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                 />
             </button>
 

@@ -9,16 +9,25 @@ const THEMES = [
     { name: 'O', bg: 'bg-violet-50', text: 'text-violet-600', header: 'bg-violet-500', border: 'border-violet-200' },
 ];
 
-export default function BingoCard({ card }) {
+export default function BingoCard({ card, level }) {
     if (!card || card.length === 0) return <div className="p-4 text-center">Loading...</div>;
 
     return (
-        <div className="w-full bg-white/60 backdrop-blur-md p-1.5 rounded-xl border-2 border-white/50 shadow-sm mt-1">
+        <div className="w-full bg-white/50 backdrop-blur-md p-1 rounded-xl border-2 border-white/50 shadow-sm overflow-hidden">
             <div className="w-full">
+                {/* Level Detail */}
+                <div className="flex justify-center mb-1">
+                    <div className="px-20 py-0 bg-white/50 rounded-full border border-white/40 shadow-sm backdrop-blur-sm">
+                        <span className="text-[12px] font-black text-red-500 uppercase tracking-[0.3em] leading-none drop-shadow-sm">
+                            CARTELA {level || 1}
+                        </span>
+                    </div>
+                </div>
+
                 {/* HEADERS */}
-                <div className="grid grid-cols-5 gap-1 mb-1.5">
+                <div className="grid grid-cols-5 gap-1 mb-1 mt-1">
                     {THEMES.map((t, i) => (
-                        <div key={i} className={`${t.header} text-white font-black text-center text-xs py-1.5 rounded-sm shadow-sm`}>
+                        <div key={i} className={`${t.header} text-white font-black text-center text-xs py-1 rounded-sm shadow-sm`}>
                             {t.name}
                         </div>
                     ))}
@@ -32,7 +41,7 @@ export default function BingoCard({ card }) {
                             <div
                                 key={cell.id}
                                 className={`
-                      h-9 flex items-center justify-center rounded-md font-bold text-xl tracking-widest shadow-sm border transition-all duration-300 relative overflow-hidden
+                      h-8 flex items-center justify-center rounded-md font-bold text-xl tracking-widest shadow-sm border transition-all duration-300 relative overflow-hidden
                       ${cell.marked
                                         ? 'bg-amber-200 border-amber-500 text-amber-900 ring-2 ring-amber-300 scale-105 z-10 shadow-lg'
                                         : `${theme.bg} ${theme.text} ${theme.border} bg-white hover:brightness-95`}

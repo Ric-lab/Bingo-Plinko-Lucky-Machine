@@ -60,7 +60,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                 startX = (targetPegCol * pegSpacing) + (pegSpacing / 2);
             }
 
-            const ballRadius = width * 0.030;
+            const ballRadius = width * 0.027;
             const ball = Bodies.circle(startX, -20, ballRadius, {
                 restitution: isFireBall ? 0.0 : 0.75, // Less bouncy (heavier feel)
                 friction: isFireBall ? 0 : 0.005,
