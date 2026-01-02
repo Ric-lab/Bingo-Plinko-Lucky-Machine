@@ -1,8 +1,41 @@
 import { useState, useEffect, useCallback } from 'react';
+import { calculateProbabilities } from '../utils/mathUtils';
 
 const COLS = ['B', 'I', 'N', 'G', 'O'];
-const RANGES = {
-    'B': [1, 15], 'I': [16, 30], 'N': [31, 45], 'G': [46, 60], 'O': [61, 75]
+const getLevelRanges = (level) => {
+    // 1. HARD: Multiples of 5 (e.g. 5, 10, 15...) -> Range 20
+    // Total 100 numbers (approx), O goes to 99.
+    if (level % 5 === 0) {
+        return {
+            'B': [1, 20],
+            'I': [21, 40],
+            'N': [41, 60],
+            'G': [61, 80],
+            'O': [81, 99]
+        };
+    }
+
+    // 2. MEDIUM: Even Levels (e.g. 2, 4, 6...) -> Range 15 (Standard Bingo)
+    // Total 75 numbers
+    if (level % 2 === 0) {
+        return {
+            'B': [1, 15],
+            'I': [16, 30],
+            'N': [31, 45],
+            'G': [46, 60],
+            'O': [61, 75]
+        };
+    }
+
+    // 3. EASY: Odd Levels (e.g. 1, 3, 7...) -> Range 10
+    // Total 50 numbers
+    return {
+        'B': [1, 10],
+        'I': [11, 20],
+        'N': [21, 30],
+        'G': [31, 40],
+        'O': [41, 50]
+    };
 };
 
 // CONFIGURATION
@@ -80,9 +113,11 @@ export function useGameLogic() {
     // Initialize Level
     const initLevel = useCallback(() => {
         // Generate Numbers per Column first (so we have valid ranges)
+        const ranges = getLevelRanges(level);
         let colsData = [[], [], [], [], []];
         for (let c = 0; c < 5; c++) {
-            colsData[c] = getUniqueRandoms(RANGES[COLS[c]][0], RANGES[COLS[c]][1], 5);
+            const range = ranges[COLS[c]];
+            colsData[c] = getUniqueRandoms(range[0], range[1], 5);
         }
 
         // Now flatten into ROW-MAJOR order for the 5x5 Grid
@@ -149,12 +184,20 @@ export function useGameLogic() {
         });
 
         // 2. Determine Count based on Weighted Probability
-        // 70% = 1 match, 25% = 2 matches, 5% = 3 matches
+        // 2. Determine Count based on Weighted Probability
+        // Dynamic probabilities based on level (Lerp)
+        const probs = calculateProbabilities(level);
+
         const rand = Math.random();
         let targetCount = 1;
-        if (rand < 0.70) targetCount = 1;
-        else if (rand < 0.95) targetCount = 2;
-        else targetCount = 3;
+
+        if (rand < probs.one) {
+            targetCount = 1;
+        } else if (rand < probs.one + probs.two) {
+            targetCount = 2;
+        } else {
+            targetCount = 3;
+        }
 
         // 3. Pick Valid Indices (Golden Buckets)
         let chosenIndices = [];
@@ -349,7 +392,8 @@ export function useGameLogic() {
                     newSlots[c] = possible[Math.floor(Math.random() * possible.length)];
                 } else {
                     // Standard: Pick a number NOT on the card for this column
-                    const range = RANGES[COLS[c]];
+                    const ranges = getLevelRanges(level);
+                    const range = ranges[COLS[c]];
                     let candidate = -1;
 
                     // Get all existing numbers in this column to exclude

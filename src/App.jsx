@@ -107,9 +107,9 @@ export default function App() {
         onOpenShop={() => setShowShopModal(true)}
       />
 
-      {/* Bingo Card (Wider: 95%) */}
+      {/* Bingo Card (Compact: 85% width) */}
       <div className="flex-shrink-0 w-full flex justify-center pb-0 bg-white/10 backdrop-blur-md z-10 border-b border-white/20">
-        <div className="w-[95%]">
+        <div className="w-[85%] max-w-[360px]">
           <BingoCard card={bingoCard} level={level} />
         </div>
       </div>
