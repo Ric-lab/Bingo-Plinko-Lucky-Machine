@@ -8,7 +8,8 @@ export default function MagicNumberModal({
     coins,        // To check affordance
     onMagicSpin,  // Callback when a number is successfully chosen (paid or free)
     showMessage,  // For feedback
-    bingoCard
+    bingoCard,
+    playClick
 }) {
     const [selectedId, setSelectedId] = useState(null);
     const [showReward, setShowReward] = useState(false); // New state
@@ -29,6 +30,7 @@ export default function MagicNumberModal({
     const COST = 500;
 
     const handleConfirm = () => {
+        playClick?.();
         if (selectedNumber) {
             if (coins >= COST) {
                 // Trigger parent action with cost
@@ -41,6 +43,7 @@ export default function MagicNumberModal({
     };
 
     const handleWatchVideo = () => {
+        playClick?.();
         if (!selectedNumber) return;
 
         // Simulated Video
@@ -54,6 +57,7 @@ export default function MagicNumberModal({
     };
 
     const handleCloseReward = () => {
+        playClick?.();
         setShowReward(false);
         onClose();
     };
@@ -74,7 +78,7 @@ export default function MagicNumberModal({
 
                 {/* Close Button matching ConfirmationModal exactly */}
                 <button
-                    onClick={onClose}
+                    onClick={() => { playClick?.(); onClose(); }}
                     className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-20"
                 >
                     <X size={20} />
@@ -98,7 +102,7 @@ export default function MagicNumberModal({
                             <button
                                 key={cell.id}
                                 disabled={isMarked}
-                                onClick={() => setSelectedId(cell.id)}
+                                onClick={() => { playClick?.(); setSelectedId(cell.id); }}
                                 className={`
                                     relative aspect-square rounded-xl flex items-center justify-center font-black text-lg transition-all shadow-sm
                                     ${isMarked

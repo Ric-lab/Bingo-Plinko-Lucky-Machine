@@ -8,7 +8,7 @@ const COLORS = {
     ball: '#ff0055ff'
 };
 
-const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
+const GameCanvas = forwardRef(({ onBallLanded, onPegHit }, ref) => {
     const sceneRef = useRef(null);
     const engineRef = useRef(null);
     const renderRef = useRef(null);
@@ -18,9 +18,15 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
     // Fix Stale Closure: Keep track of the latest callback
     const onBallLandedRef = useRef(onBallLanded);
 
+    // Audio & Visual Refs
+    // const { play: playHit } = useSound('/Audio/peg.mp3', { volume: 1.0, multi: true }); // Moved to App.jsx
+    const playHitRef = useRef(onPegHit);
+    const litPegs = useRef(new Map()); // Map<ID, {x, y, time}>
+
     useEffect(() => {
         onBallLandedRef.current = onBallLanded;
-    }, [onBallLanded]);
+        playHitRef.current = onPegHit;
+    }, [onBallLanded, onPegHit]);
 
     useImperativeHandle(ref, () => ({
         dropBall: (colIdx, isFireBall = false) => {
@@ -314,6 +320,10 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                     const isFloor = bodyA.label === 'floor' || bodyB.label === 'floor';
                     const peg = (bodyA.label === 'peg' ? bodyA : (bodyB.label === 'peg' ? bodyB : null));
 
+                    // Explicitly IGNORE separators/funnels for sound
+                    const isFunnel = bodyA.label.includes('funnel') || bodyB.label.includes('funnel');
+                    if (isFunnel) return;
+
                     // ACTIVE BUMPER LOGIC
                     if (ball && peg) {
                         // Calculate vector from peg to ball
@@ -322,6 +332,24 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                         // Adjust magnitude to taste. 0.05 is significant for this size.
                         const force = Vector.mult(normal, 0.05);
                         Body.applyForce(ball, ball.position, force);
+
+                        // --- FEEDBACK SECTION ---
+                        // 1. Audio
+                        // FIREBALL IS SILENT (For now)
+                        if (playHitRef.current && ball.label !== 'fireball') {
+                            playHitRef.current();
+                        }
+
+                        // 2. Haptic
+                        if (navigator.vibrate) navigator.vibrate(15);
+
+                        // 3. Visual (Light Up)
+                        // Save the peg position and time to the map
+                        litPegs.current.set(peg.id, {
+                            x: peg.position.x,
+                            y: peg.position.y,
+                            time: Date.now()
+                        });
                     }
 
                     // ACTIVE WALL KICK (Keep it in the center!)
@@ -353,7 +381,7 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
 
                         // 4. Trigger Game Logic (Use Ref to get latest state)
                         if (onBallLandedRef.current) {
-                            onBallLandedRef.current(binIdx);
+                            onBallLandedRef.current(binIdx, ball.label === 'fireball');
                         }
 
                         // 5. DELAYED REMOVAL (Let user see it land)
@@ -361,12 +389,23 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                             Composite.remove(engine.world, ball);
                         }, 1000); // 2.0s delay (User requested longer time)
                     } else if (ball && isFloor) {
+                        // FEEDBACK: Play sound/haptics on floor hit (ONCE)
+                        if (!ball.hasHitFloor) {
+                            // FIREBALL IS SILENT
+                            if (playHitRef.current && ball.label !== 'fireball') {
+                                playHitRef.current();
+                            }
+                            if (navigator.vibrate) navigator.vibrate(10);
+                            ball.hasHitFloor = true;
+                        }
+
                         // Cleanup on floor hit (ONLY if missed sensor)
                         // If it hit the sensor, it's in processedBalls, so we let the timeout handle it.
                         if (!processedBalls.current.has(ball.id)) {
                             Composite.remove(engine.world, ball);
                         }
                     }
+
                 });
             });
 
@@ -448,6 +487,37 @@ const GameCanvas = forwardRef(({ onBallLanded }, ref) => {
                         ctx.fill();
                         ctx.globalCompositeOperation = 'source-over'; // Reset
                     }
+                });
+
+                // 2. DRAW LIT PEGS (Visual Feedback)
+                const now = Date.now();
+                const GLOW_DURATION = 350; // slightly longer fade
+
+                litPegs.current.forEach((data, id) => {
+                    const elapsed = now - data.time;
+                    if (elapsed > GLOW_DURATION) {
+                        litPegs.current.delete(id);
+                        return;
+                    }
+
+                    // Ease out cubic for smoother fade
+                    const t = elapsed / GLOW_DURATION;
+                    const alpha = 1 - t; // Linear fade is fine for subtle effects
+
+                    // Draw Glow - Soft & Subtle
+                    // Using 'source-over' instead of 'screen' for less "burning" white intensity
+                    ctx.globalCompositeOperation = 'source-over';
+
+                    ctx.beginPath();
+                    // Match peg size roughly (approx 12-15px depending on screen)
+                    // We just add a small rim
+                    ctx.arc(data.x, data.y, 16, 0, 2 * Math.PI);
+
+                    // Softer Gold/Orange, low opacity
+                    ctx.fillStyle = `rgba(255, 200, 50, ${alpha * 0.5})`;
+                    ctx.fill();
+
+                    // No inner white core - keeps it flat and subtle
                 });
 
                 // 2. UPDATE & DRAW Particles

@@ -7,6 +7,7 @@ import BucketRow from './components/BucketRow';
 import Footer from './components/Footer';
 import { useGameLogic } from './hooks/useGameLogic';
 import { useTheme } from './hooks/useTheme';
+import { useSound } from './hooks/useSound';
 
 
 
@@ -25,6 +26,49 @@ export default function App() {
   } = useGameLogic();
 
   const { getAsset } = useTheme();
+
+  // Audio Hooks
+  // Audio Hooks (BGM Volume 0.3, Pegs at 1.0)
+  const { play: playBGM, stop: stopBGM } = useSound('/Audio/song.mp3', { volume: 0.3, loop: true });
+  const { play: playSpin, stop: stopSpin } = useSound('/Audio/slot.mp3', { volume: 0.05, loop: true });
+  const { play: playPeg } = useSound('/Audio/peg.mp3', { volume: 1.0, multi: true });
+  const { play: playClick } = useSound('/Audio/buttons.mp3', { volume: 0.25 });
+  // Fireball SFX
+  const { play: playFireball, stop: stopFireball } = useSound('/Audio/fireball.mp3', { volume: 0.3, loop: true });
+  const { play: playExplosion } = useSound('/Audio/explosion.mp3', { volume: 1.0 });
+
+  // Manage Background Music based on Game Phase
+  // Manage Background Music based on Game Phase
+  useEffect(() => {
+    // There is no 'PLAYING' phase. The active phases are 'SPIN', 'SPINNING', 'DROP', 'RESOLVE'.
+    const isGameActive = (phase !== 'GAME_OVER' && phase !== 'VICTORY');
+
+    if (isGameActive) {
+      playBGM();
+
+      // FALLBACK: If autoplay blocked, try again on first interaction
+      const handleInteraction = () => {
+        playBGM();
+        // Remove self after success (or attempt)
+        window.removeEventListener('click', handleInteraction);
+      };
+      window.addEventListener('click', handleInteraction);
+
+      return () => window.removeEventListener('click', handleInteraction);
+
+    } else {
+      stopBGM();
+    }
+  }, [phase, playBGM, stopBGM]);
+
+  // Manage Spin Sound
+  useEffect(() => {
+    if (phase === 'SPINNING') {
+      playSpin();
+    } else {
+      stopSpin();
+    }
+  }, [phase, playSpin, stopSpin]);
 
   // New Message Modal State
   const [messageModal, setMessageModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
@@ -57,6 +101,11 @@ export default function App() {
       if (canvasRef.current) {
         canvasRef.current.dropBall(colIndex, isFire);
       }
+
+      // SFX for Fireball
+      if (isFire) {
+        playFireball();
+      }
     }
   };
 
@@ -70,7 +119,13 @@ export default function App() {
     // Error handled by modal
   };
 
-  const handleBallLanded = (binIndex) => {
+  const handleBallLanded = (binIndex, isFireball = false) => {
+    // 1. Handle Fireball SFX
+    if (isFireball) {
+      stopFireball();
+      playExplosion();
+    }
+
     const landedNumber = slotsResult[binIndex];
     const result = resolveTurn(landedNumber, binIndex);
 
@@ -104,7 +159,10 @@ export default function App() {
         coins={coins}
         balls={balls}
         level={level}
-        onOpenShop={() => setShowShopModal(true)}
+        onOpenShop={() => {
+          playClick();
+          setShowShopModal(true);
+        }}
       />
 
       {/* Bingo Card (Compact: 85% width) */}
@@ -120,6 +178,7 @@ export default function App() {
           <GameCanvas
             ref={canvasRef}
             onBallLanded={handleBallLanded}
+            onPegHit={playPeg}
           />
         </div>
 
@@ -131,6 +190,7 @@ export default function App() {
           phase={phase}
           fireBallActive={fireBallActive}
           magicActive={magicActive}
+          playClick={playClick}
         />
 
 
@@ -144,8 +204,12 @@ export default function App() {
           phase={phase}
           coins={coins}
           balls={balls}
-          onSpin={startSpin}
+          onSpin={(val) => {
+            playClick();
+            startSpin(val);
+          }}
           onPowerUp={(type) => {
+            playClick();
             if (type === 'fireball') {
               setShowFireballConfirm(true);
             }
@@ -162,6 +226,7 @@ export default function App() {
         onMagicSpin={handleMagicSpin}
         showMessage={showMessage}
         bingoCard={bingoCard}
+        playClick={playClick}
       />
 
       <FireballModal
@@ -170,6 +235,7 @@ export default function App() {
         coins={coins}
         buyItem={buyItem}
         showMessage={showMessage}
+        playClick={playClick}
       />
 
       <MessageModal
@@ -187,6 +253,7 @@ export default function App() {
           <NextLevelModal
             level={level}
             onNextLevel={nextLevel}
+            playClick={playClick}
           />
         ) : (
           <GameOverModal
@@ -194,6 +261,7 @@ export default function App() {
             onRestart={initLevel}
             buyItem={buyItem}
             showMessage={showMessage}
+            playClick={playClick}
           />
         )
       )}
@@ -203,6 +271,7 @@ export default function App() {
         isOpen={showShopModal}
         onClose={() => setShowShopModal(false)}
         buyItem={buyItem}
+        playClick={playClick}
       />
     </div>
   );

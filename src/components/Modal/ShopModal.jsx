@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingCart, Star, Crown, Coins } from 'lucide-react';
 
-export default function ShopModal({ isOpen, onClose, buyItem }) {
+export default function ShopModal({ isOpen, onClose, buyItem, playClick }) {
   const offers = [
     {
       id: 'starter',
@@ -36,6 +36,7 @@ export default function ShopModal({ isOpen, onClose, buyItem }) {
   ];
 
   const handleBuy = (offer) => {
+    playClick?.();
     // Simulation
     console.log("Comprando:", offer.title);
     if (buyItem) buyItem('coins', -offer.coins); // Negative cost adds coins in cheat/debug mode, but here we just log
@@ -52,7 +53,7 @@ export default function ShopModal({ isOpen, onClose, buyItem }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={() => { playClick?.(); onClose(); }}
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
 
@@ -69,8 +70,8 @@ export default function ShopModal({ isOpen, onClose, buyItem }) {
                 <ShoppingCart className="text-white w-6 h-6 drop-shadow-md" />
                 <h2 className="text-2xl font-black text-white drop-shadow-md tracking-wide">LOJA</h2>
               </div>
-              <button 
-                onClick={onClose}
+              <button
+                onClick={() => { playClick?.(); onClose(); }}
                 className="p-2 bg-white/20 rounded-full hover:bg-white/40 transition-colors"
               >
                 <X className="w-6 h-6 text-white" />
@@ -124,7 +125,7 @@ export default function ShopModal({ isOpen, onClose, buyItem }) {
                 </motion.div>
               ))}
             </div>
-            
+
             <div className="bg-yellow-100 p-2 text-center text-xs text-yellow-800 font-medium">
               Transações seguras via Google Play
             </div>

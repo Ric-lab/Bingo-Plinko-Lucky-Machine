@@ -4,7 +4,8 @@ export default function GameOverModal({
     coins,
     onRestart,
     buyItem,
-    showMessage
+    showMessage,
+    playClick
 }) {
     return (
         <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center flex-col text-white animate-fade-in p-4 text-center overflow-hidden w-full h-full">
@@ -23,6 +24,7 @@ export default function GameOverModal({
                 {/* CONTINUE OPTION */}
                 <button
                     onClick={() => {
+                        playClick?.();
                         if (coins >= 1000) {
                             buyItem('continue', 1000);
                         } else {
@@ -43,7 +45,7 @@ export default function GameOverModal({
                 </button>
 
                 <button
-                    onClick={onRestart}
+                    onClick={() => { playClick?.(); onRestart(); }}
                     className="group relative bg-gradient-to-b px-6 py-3.5 rounded-full font-black text-2xl shadow-xl transition-all border-4 border-white/30 from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 shadow-[0_5px_0_rgb(185,28,28)] active:shadow-none active:translate-y-[5px]"
                 >
                     <span className="drop-shadow-md">

@@ -39,7 +39,7 @@ const getLevelRanges = (level) => {
 };
 
 // CONFIGURATION
-const BALLS_PER_LEVEL = 1;
+const BALLS_PER_LEVEL = 5;
 
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -166,13 +166,8 @@ export function useGameLogic() {
         // ALLOW Magic Number during DROP phase
         if (phase !== 'SPIN' && !(phase === 'DROP' && magicNumberOverride !== null)) return;
 
-        // If applying Magic Number during DROP, we skip the spin animation
-        const isInstantMagic = (phase === 'DROP' && magicNumberOverride !== null);
-
-        if (!isInstantMagic) {
-            // 0. Set Phase to SPINNING immediately (Normal Spin)
-            setPhase('SPINNING');
-        }
+        // 0. Set Phase to SPINNING immediately (Normal Spin)
+        setPhase('SPINNING');
 
         // 1. Identify Needed Numbers (Unmarked, Non-Free)
         // Group them by column for easier access
@@ -418,14 +413,9 @@ export function useGameLogic() {
         setSlotsResult(newSlots);
 
         // Transition to DROP after delay (SLOT MACHINE TIME)
-        if (!isInstantMagic) {
-            setTimeout(() => {
-                setPhase('DROP');
-            }, 2200); // 2.2 seconds (buffer for animation)
-        } else {
-            // If instant, we are already in DROP, just ensure state is ready (reduntant but safe)
-            // setPhase('DROP'); 
-        }
+        setTimeout(() => {
+            setPhase('DROP');
+        }, 2200); // 2.2 seconds (buffer for animation)
     };
 
 

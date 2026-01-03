@@ -154,7 +154,7 @@ const DistributedFire = () => {
     );
 };
 
-export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, fireBallActive, magicActive }) {
+export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, fireBallActive, magicActive, playClick }) {
     // State to track which slots have finished spinning
     const [revealed, setRevealed] = useState({});
 
@@ -202,7 +202,12 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
 
                 return (
                     <div key={i} className="flex-1 flex flex-col items-center justify-end h-full pointer-events-auto cursor-pointer group relative"
-                        onClick={() => phase === 'DROP' && onSlotClick(i)}>
+                        onClick={() => {
+                            if (phase === 'DROP') {
+                                playClick?.();
+                                onSlotClick(i);
+                            }
+                        }}>
 
 
                         {/* FIREBALL OVERLAY EFFECT (Realistic Particles) */}

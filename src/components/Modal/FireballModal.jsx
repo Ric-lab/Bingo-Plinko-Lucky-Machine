@@ -8,7 +8,8 @@ export default function FireballModal({
     onClose,
     coins,
     buyItem,
-    showMessage
+    showMessage,
+    playClick
 }) {
     const [showReward, setShowReward] = useState(false);
     const COST = 250;
@@ -19,6 +20,7 @@ export default function FireballModal({
     }, [isOpen]);
 
     const handleConfirm = () => {
+        playClick?.();
         if (coins >= COST) {
             if (buyItem('fireball', COST)) {
                 // Success handled by hook/App, but we can show message here if needed
@@ -32,6 +34,7 @@ export default function FireballModal({
     };
 
     const handleWatchVideo = () => {
+        playClick?.();
         // Simulated Ad Logic
         showMessage('info', 'Watching Ad...', 'Please wait 2 seconds...', 2000);
 
@@ -44,6 +47,7 @@ export default function FireballModal({
     };
 
     const handleCloseReward = () => {
+        playClick?.();
         setShowReward(false);
         onClose();
     };
@@ -61,7 +65,7 @@ export default function FireballModal({
     return (
         <ConfirmationModal
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={() => { playClick?.(); onClose(); }}
             onConfirm={handleConfirm}
             confirmLabel={
                 <div className="flex items-center justify-center gap-2">

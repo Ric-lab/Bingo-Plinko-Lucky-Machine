@@ -72,50 +72,40 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
 
     // Custom render for CELEBRATION type (LUCK) to be festive but direct
     if (type === 'celebration') {
-        // Trigger confetti on mount (Coin Rain)
+        // Trigger confetti on mount (Optimized Burst)
         React.useEffect(() => {
             if (isOpen) {
-                // Main explosion - Reduced spread
+                // Responsive Settings
+                const isMobile = window.innerWidth < 768;
+                const particleCount = isMobile ? 60 : 100;
+                const scalar = isMobile ? 1.2 : 1.0; // Bigger on mobile
+                const velocity = isMobile ? 60 : 80; // Shoot higher on mobile (taller screen)
+
+                const defaults = {
+                    spread: isMobile ? 50 : 70,
+                    ticks: 200,
+                    gravity: 1.2,
+                    decay: 0.92,
+                    startVelocity: velocity,
+                    colors: ['#FFD700', '#FFA500', '#DAA520', '#FFFFFF'],
+                    scalar
+                };
+
+                // 1. Left Cannon (Bottom Left)
                 confetti({
-                    particleCount: 60,
-                    spread: 50,
-                    origin: { y: 0.5 },
-                    zIndex: 200,
-                    colors: ['#FFD700', '#FFA500', '#DAA520'], // Gold shades
-                    shapes: ['circle'],
-                    scalar: 0.8, // Smaller coins
-                    gravity: 0.8,
-                    disableForReducedMotion: true // Good practice
+                    ...defaults,
+                    particleCount,
+                    angle: 60,
+                    origin: { x: 0, y: 0.9 } // Shoot from bottom left
                 });
 
-                // Rain effect
-                const duration = 3000;
-                const animationEnd = Date.now() + duration;
-
-                (function frame() {
-                    const timeLeft = animationEnd - Date.now();
-                    const ticks = Math.max(200, 500 * (timeLeft / duration));
-
-                    if (timeLeft <= 0) return;
-
-                    confetti({
-                        particleCount: 2,
-                        startVelocity: 0,
-                        ticks: ticks,
-                        origin: {
-                            x: Math.random(),
-                            y: (Math.random() * 0.1) - 0.2
-                        },
-                        colors: ['#FFD700', '#FFA500', '#DAA520'],
-                        shapes: ['circle'],
-                        gravity: 1.0,
-                        scalar: 1.0,
-                        zIndex: 200,
-                        disableForReducedMotion: true
-                    });
-
-                    requestAnimationFrame(frame);
-                }());
+                // 2. Right Cannon (Bottom Right)
+                confetti({
+                    ...defaults,
+                    particleCount,
+                    angle: 120,
+                    origin: { x: 1, y: 0.9 } // Shoot from bottom right
+                });
             }
         }, [isOpen]);
 
