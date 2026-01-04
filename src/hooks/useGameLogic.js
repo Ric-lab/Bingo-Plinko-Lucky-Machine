@@ -475,7 +475,7 @@ export function useGameLogic() {
                     setIsGameOver(true);
                     setPhase('GAME_OVER');
                     setCoins(prev => prev + (100 + level)); // REWARD 100 + Level COINS
-                }, 750);
+                }, 1100);
             } else {
                 // If LOSE / NO Bingo, we must still check if we are out of balls
                 if (balls <= 0) {

@@ -1,7 +1,7 @@
 import React from 'react';
-import { ShoppingCart, Gamepad2 } from 'lucide-react';
+import { ShoppingCart, Gamepad2, Menu } from 'lucide-react';
 
-export default function Header({ coins, level, onOpenShop }) {
+export default function Header({ coins, level, onOpenShop, onOpenMenu }) {
     return (
         <div className="w-full h-[50px] backdrop-blur-md bg-white/10 flex items-center justify-between px-4 z-30 flex-shrink-0 relative">
 
@@ -12,13 +12,22 @@ export default function Header({ coins, level, onOpenShop }) {
             </div>
 
 
-            {/* Right: Shop */}
-            <button
-                onClick={onOpenShop}
-                className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-full border border-gray-200 transition-colors shadow-sm"
-            >
-                <ShoppingCart size={18} className="text-accent-blue" />
-            </button>
+            {/* Right: Shop & Menu */}
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={onOpenShop}
+                    className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-full border border-gray-200 transition-colors shadow-sm"
+                >
+                    <ShoppingCart size={18} className="text-accent-blue" />
+                </button>
+
+                <button
+                    onClick={onOpenMenu}
+                    className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-full border border-gray-200 transition-colors shadow-sm text-gray-700"
+                >
+                    <Menu size={18} />
+                </button>
+            </div>
 
         </div>
     );

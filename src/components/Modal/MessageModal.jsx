@@ -57,7 +57,7 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
 
                 <div className="flex flex-col items-center animate-pulse px-4 text-center">
                     <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-red-800 drop-shadow-[0_2px_0_rgba(139,0,0,1)] stroke-white tracking-widest uppercase flex items-center justify-center gap-2">
-                        <span className="text-4xl">😔</span> TRY AGAIN <span className="text-4xl">😔</span>
+                        <span className="text-4xl"></span> TRY AGAIN <span className="text-4xl"></span>
                     </h1>
 
                     {message && (
@@ -72,9 +72,16 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
 
     // Custom render for CELEBRATION type (LUCK) to be festive but direct
     if (type === 'celebration') {
+        const canvasRef = React.useRef(null);
+
         // Trigger confetti on mount (Optimized Burst)
         React.useEffect(() => {
-            if (isOpen) {
+            if (isOpen && canvasRef.current) {
+                const myConfetti = confetti.create(canvasRef.current, {
+                    resize: true,
+                    useWorker: true
+                });
+
                 // Responsive Settings
                 const isMobile = window.innerWidth < 768;
                 const particleCount = isMobile ? 60 : 100;
@@ -92,7 +99,7 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
                 };
 
                 // 1. Left Cannon (Bottom Left)
-                confetti({
+                myConfetti({
                     ...defaults,
                     particleCount,
                     angle: 60,
@@ -100,7 +107,7 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
                 });
 
                 // 2. Right Cannon (Bottom Right)
-                confetti({
+                myConfetti({
                     ...defaults,
                     particleCount,
                     angle: 120,
@@ -113,7 +120,13 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
             <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none animate-bounce-in flex-col overflow-hidden">
                 <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 animate-fade-in" />
 
-                <div className="flex flex-col items-center animate-pulse px-4 text-center">
+                {/* Local Canvas for Confetti */}
+                <canvas
+                    ref={canvasRef}
+                    className="absolute inset-0 w-full h-full pointer-events-none z-0"
+                />
+
+                <div className="flex flex-col items-center animate-pulse px-4 text-center z-10">
                     <h1 className="text-6xl font-black text-yellow-300 drop-shadow-[0_3px_0_rgba(255,140,0,1)] stroke-black tracking-widest uppercase flex items-center justify-center gap-2">
                         <span className="text-5xl">🍀</span> LUCKY! <span className="text-5xl">🍀</span>
                     </h1>

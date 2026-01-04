@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import Matter from 'matter-js';
 
 const { Engine, Render, Runner, Bodies, Body, Composite, Events, Vector } = Matter;
@@ -8,7 +8,7 @@ const COLORS = {
     ball: '#ff0055ff'
 };
 
-const GameCanvas = forwardRef(({ onBallLanded, onPegHit }, ref) => {
+const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true }, ref) => {
     const sceneRef = useRef(null);
     const engineRef = useRef(null);
     const renderRef = useRef(null);
@@ -22,6 +22,9 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit }, ref) => {
     // const { play: playHit } = useSound('/Audio/peg.mp3', { volume: 1.0, multi: true }); // Moved to App.jsx
     const playHitRef = useRef(onPegHit);
     const litPegs = useRef(new Map()); // Map<ID, {x, y, time}>
+
+    // Shake State
+    const [shake, setShake] = useState(false);
 
     useEffect(() => {
         onBallLandedRef.current = onBallLanded;
@@ -286,7 +289,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit }, ref) => {
                 // extending from roughly the bottom of the visible pipe down.
                 const pipeX = x + binW / 2;
                 const sensorHeight = 10; // Thin sensor at the very bottom
-                const sensorY = height - 5; // Glued to the bottom edge (height - 10/2) -> Bottom at height
+                const sensorY = height - 20; // Trigger slightly earlier (was -5)
 
                 // CRITICAL FIX: Make Sensor FULL WIDTH of the bin
                 // Using binW + 2 to slight overlap
@@ -341,7 +344,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit }, ref) => {
                         }
 
                         // 2. Haptic
-                        if (navigator.vibrate) navigator.vibrate(15);
+                        if (vibrationEnabled && navigator.vibrate) navigator.vibrate(15);
 
                         // 3. Visual (Light Up)
                         // Save the peg position and time to the map
@@ -384,6 +387,17 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit }, ref) => {
                             onBallLandedRef.current(binIdx, ball.label === 'fireball');
                         }
 
+                        // --- FIREBALL IMPACT EFFECT ---
+                        if (ball.label === 'fireball') {
+                            // 1. Heavy Vibrate
+                            if (vibrationEnabled && navigator.vibrate) {
+                                navigator.vibrate([100, 50, 100]); // 100ms vib, 50ms pause, 100ms vib
+                            }
+                            // 2. Trigger Shake
+                            setShake(true);
+                            setTimeout(() => setShake(false), 500); // Reset after anim
+                        }
+
                         // 5. DELAYED REMOVAL (Let user see it land)
                         setTimeout(() => {
                             Composite.remove(engine.world, ball);
@@ -395,7 +409,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit }, ref) => {
                             if (playHitRef.current && ball.label !== 'fireball') {
                                 playHitRef.current();
                             }
-                            if (navigator.vibrate) navigator.vibrate(10);
+                            if (vibrationEnabled && navigator.vibrate) navigator.vibrate(10);
                             ball.hasHitFloor = true;
                         }
 
@@ -573,7 +587,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit }, ref) => {
     }, []);
 
     return (
-        <div ref={sceneRef} className="w-full h-full relative" />
+        <div ref={sceneRef} className={`w-full h-full relative ${shake ? 'animate-shake-heavy' : ''}`} />
     );
 });
 

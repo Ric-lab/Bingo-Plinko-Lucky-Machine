@@ -198,6 +198,55 @@
     animation: fire-flicker 0.3s infinite alternate-reverse ease-in-out;
 }
 
+/* 10. Heavy Shake (Impact) */
+@keyframes shake-heavy {
+
+    0%,
+    100% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    10% {
+        transform: translate(-5px, -10px) rotate(-2deg);
+    }
+
+    20% {
+        transform: translate(-10px, 0px) rotate(2deg);
+    }
+
+    30% {
+        transform: translate(5px, 10px) rotate(0deg);
+    }
+
+    40% {
+        transform: translate(5px, -5px) rotate(1deg);
+    }
+
+    50% {
+        transform: translate(-5px, 5px) rotate(-1deg);
+    }
+
+    60% {
+        transform: translate(0px, 10px) rotate(0deg);
+    }
+
+    70% {
+        transform: translate(5px, 5px) rotate(-1deg);
+    }
+
+    80% {
+        transform: translate(-5px, -5px) rotate(1deg);
+    }
+
+    90% {
+        transform: translate(0px, 5px) rotate(0deg);
+    }
+}
+
+.animate-shake-heavy {
+    animation: shake-heavy 0.5s cubic-bezier(.36, .07, .19, .97) both;
+}
+
 @layer base {
 
     html,

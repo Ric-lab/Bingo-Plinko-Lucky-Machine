@@ -8,17 +8,11 @@ export default function GameOverModal({
     playClick
 }) {
     return (
-        <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center flex-col text-white animate-fade-in p-4 text-center overflow-hidden w-full h-full">
+        <div className="absolute inset-0 z-50 bg-red-900/90 backdrop-blur-md flex items-center justify-center flex-col text-white animate-fade-in p-4 text-center overflow-hidden w-full h-full">
 
             <h1 className="text-5xl font-extrabold mb-3 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] animate-scale-pulse">
                 GAME OVER
             </h1>
-
-            <div className="mb-6 space-y-2">
-                <p className="text-xl text-gray-200 font-bold">
-                    Out of balls!
-                </p>
-            </div>
 
             <div className="flex flex-col gap-4 w-full max-w-xs px-4">
                 {/* CONTINUE OPTION */}

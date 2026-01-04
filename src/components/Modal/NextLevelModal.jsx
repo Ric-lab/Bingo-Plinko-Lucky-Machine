@@ -1,45 +1,61 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useSound } from '../../hooks/useSound';
 
 export default function NextLevelModal({
     level,
     onNextLevel,
-    playClick
+    playClick,
+    playBingo
 }) {
+    useEffect(() => {
+        playBingo?.();
+    }, [playBingo]);
+
     return (
-        <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center flex-col text-white animate-fade-in p-4 text-center overflow-hidden w-full h-full">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-end pb-16 w-full h-full bg-black/90 overflow-hidden">
 
-            {/* Festive Background Elements */}
-            <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-10 left-10 text-6xl animate-bounce">🎉</div>
-                <div className="absolute top-20 right-20 text-6xl animate-pulse">✨</div>
-                <div className="absolute bottom-10 left-20 text-6xl animate-spin-slow">🎈</div>
-                <div className="absolute bottom-30 right-10 text-6xl animate-bounce delay-100">🎊</div>
+            {/* Full Screen Background Image */}
+            <div className="absolute inset-0 w-full h-full">
+                <img
+                    src="/Images/Immutable/bingo!.png"
+                    alt="Level Complete Background"
+                    className="w-full h-full object-cover animate-fade-in"
+                />
+                {/* Overlay gradient to ensure text readability at the bottom */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
             </div>
 
-            <h1 className="text-5xl font-extrabold mb-3 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] animate-scale-pulse">
-                BINGO!!!
-            </h1>
+            {/* Content Overlay */}
+            <div className="relative z-10 flex flex-col items-center gap-24 animate-slide-up">
 
-            <div className="mb-6 space-y-2">
-                <p className="text-xl text-gray-200 font-bold">
-                    🎉 LEVEL COMPLETE! 🎉
-                </p>
-                <div className="bg-gradient-to-r from-yellow-600 to-yellow-800 text-white px-8 py-2 rounded-xl border-2 border-yellow-400 shadow-[0_0_20px_rgba(255,215,0,0.5)] animate-bounce">
-                    <p className="text-2xl font-black tracking-wider">REWARD: +{100 + level} 🟡</p>
+                {/* Reward Badge */}
+                <div className="bg-gradient-to-r from-yellow-600/90 to-yellow-800/90 text-white px-6 py-2 rounded-xl border-2 border-yellow-400 shadow-[0_0_20px_rgba(255,215,0,0.5)] backdrop-blur-sm">
+                    <div className="flex items-center justify-center gap-2">
+                        <span className="text-2xl font-black tracking-wider drop-shadow-md">
+                            +{100 + level}
+                        </span>
+                        <img
+                            src="/Images/Immutable/Coin.png"
+                            alt="Coins"
+                            className="w-8 h-8 object-contain drop-shadow-md"
+                        />
+                    </div>
                 </div>
-            </div>
 
-            <div className="flex flex-col gap-4 w-full max-w-xs px-4">
+                {/* Next Level Button */}
                 <button
                     onClick={() => { playClick?.(); onNextLevel(); }}
-                    className="group relative bg-gradient-to-b px-6 py-3.5 rounded-full font-black text-2xl shadow-xl transition-all border-4 border-white/30 from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 shadow-[0_5px_0_rgb(21,128,61)] active:shadow-none active:translate-y-[5px]"
+                    className="group relative bg-gradient-to-b px-12 py-6 rounded-full font-black text-white text-4xl shadow-[0_10px_20px_rgba(0,0,0,0.5),0_0_50px_rgba(34,197,94,0.8)] transition-all border-4 border-white/70 from-green-500 via-green-400 to-green-600 hover:from-green-400 hover:to-green-500 active:scale-95 hover:scale-110 animate-scale-pulse hover:animate-none"
                 >
-                    <span className="drop-shadow-md">
-                        NEXT LEVEL ➡️
+                    <span className="flex items-center gap-3 relative z-10">
+                        NEXT
                     </span>
 
-                    {/* Button Shine Effect */}
-                    <div className="absolute inset-0 rounded-full bg-white/20 skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                    {/* Enhanced Shine Effect */}
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+
+                    {/* Glow Ring */}
+                    <div className="absolute inset-0 rounded-full border-2 border-white/50 animate-ping opacity-20" />
                 </button>
             </div>
         </div>

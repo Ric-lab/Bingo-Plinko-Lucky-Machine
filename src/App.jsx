@@ -3,6 +3,7 @@ import { Flame } from 'lucide-react';
 import Header from './components/Header';
 import BingoCard from './components/BingoCard';
 import GameCanvas from './components/GameCanvas';
+import SideMenu from './components/SideMenu';
 import BucketRow from './components/BucketRow';
 import Footer from './components/Footer';
 import { useGameLogic } from './hooks/useGameLogic';
@@ -20,6 +21,13 @@ import FireballModal from './components/Modal/FireballModal';
 import ShopModal from './components/Modal/ShopModal';
 
 export default function App() {
+  // Global Settings (Defined early to use in hooks)
+  const [audioSettings, setAudioSettings] = useState({
+    music: true,
+    sfx: true,
+    vibration: true
+  });
+
   const {
     state: { coins, balls, level, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive },
     actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel }
@@ -27,17 +35,17 @@ export default function App() {
 
   const { getAsset } = useTheme();
 
-  // Audio Hooks
   // Audio Hooks (BGM Volume 0.3, Pegs at 1.0)
-  const { play: playBGM, stop: stopBGM } = useSound('/Audio/song.mp3', { volume: 0.3, loop: true });
-  const { play: playSpin, stop: stopSpin } = useSound('/Audio/slot.mp3', { volume: 0.05, loop: true });
-  const { play: playPeg } = useSound('/Audio/peg.mp3', { volume: 1.0, multi: true });
-  const { play: playClick } = useSound('/Audio/buttons.mp3', { volume: 0.25 });
+  const { play: playBGM, stop: stopBGM } = useSound('/Audio/song.mp3', { volume: audioSettings.music ? 0.3 : 0, loop: true });
+  const { play: playSpin, stop: stopSpin } = useSound('/Audio/slot.mp3', { volume: audioSettings.sfx ? 0.05 : 0, loop: true });
+  const { play: playPeg } = useSound('/Audio/peg.mp3', { volume: audioSettings.sfx ? 1.0 : 0, multi: true });
+  const { play: playClick } = useSound('/Audio/buttons.mp3', { volume: audioSettings.sfx ? 0.25 : 0 });
   // Fireball SFX
-  const { play: playFireball, stop: stopFireball } = useSound('/Audio/fireball.mp3', { volume: 0.3, loop: true });
-  const { play: playExplosion } = useSound('/Audio/explosion.mp3', { volume: 1.0 });
+  const { play: playFireball, stop: stopFireball } = useSound('/Audio/fireball.mp3', { volume: audioSettings.sfx ? 0.3 : 0, loop: true });
+  const { play: playExplosion } = useSound('/Audio/explosion.mp3', { volume: audioSettings.sfx ? 1.0 : 0 });
+  const { play: playLucky } = useSound('/Audio/lucky.mp3', { volume: audioSettings.sfx ? 0.2 : 0 });
+  const { play: playBingo } = useSound('/Audio/BINGO!.mp3', { volume: audioSettings.sfx ? 0.3 : 0 });
 
-  // Manage Background Music based on Game Phase
   // Manage Background Music based on Game Phase
   useEffect(() => {
     // There is no 'PLAYING' phase. The active phases are 'SPIN', 'SPINNING', 'DROP', 'RESOLVE'.
@@ -76,6 +84,7 @@ export default function App() {
   const [showMagicModal, setShowMagicModal] = useState(false);
   const [showFireballConfirm, setShowFireballConfirm] = useState(false);
   const [showShopModal, setShowShopModal] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Helper to show modal
   const showMessage = (type, title, message, autoCloseDuration = 0) => {
@@ -134,6 +143,7 @@ export default function App() {
       if (result.hit) {
         // Show "LUCK!" only if game continues (Not Bingo AND Not Defeat)
         if (!result.hasBingo && !result.isDefeat) {
+          playLucky();
           showMessage('celebration', 'LUCKY!', `+${result.earned}🟡`, 1750);
         }
       } else {
@@ -163,6 +173,17 @@ export default function App() {
           playClick();
           setShowShopModal(true);
         }}
+        onOpenMenu={() => {
+          playClick();
+          setIsMenuOpen(true);
+        }}
+      />
+
+      <SideMenu
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        settings={audioSettings}
+        onUpdateSettings={setAudioSettings}
       />
 
       {/* Bingo Card (Compact: 85% width) */}
@@ -179,6 +200,7 @@ export default function App() {
             ref={canvasRef}
             onBallLanded={handleBallLanded}
             onPegHit={playPeg}
+            vibrationEnabled={audioSettings.vibration}
           />
         </div>
 
@@ -254,6 +276,7 @@ export default function App() {
             level={level}
             onNextLevel={nextLevel}
             playClick={playClick}
+            playBingo={playBingo}
           />
         ) : (
           <GameOverModal
