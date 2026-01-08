@@ -33,18 +33,27 @@ export default function App() {
     actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel }
   } = useGameLogic();
 
-  const { getAsset } = useTheme();
+  const {
+    currentSkin,
+    setCurrentSkin,
+    ownedSkins,
+    unlockSkin,
+    getImage,
+    getImmutableImage,
+    getSound,
+    getImmutableSound
+  } = useTheme();
 
   // Audio Hooks (BGM Volume 0.3, Pegs at 1.0)
-  const { play: playBGM, stop: stopBGM } = useSound('/Audio/song.mp3', { volume: audioSettings.music ? 0.3 : 0, loop: true });
-  const { play: playSpin, stop: stopSpin } = useSound('/Audio/slot.mp3', { volume: audioSettings.sfx ? 0.05 : 0, loop: true });
-  const { play: playPeg } = useSound('/Audio/peg.mp3', { volume: audioSettings.sfx ? 1.0 : 0, multi: true });
-  const { play: playClick } = useSound('/Audio/buttons.mp3', { volume: audioSettings.sfx ? 0.25 : 0 });
+  const { play: playBGM, stop: stopBGM } = useSound(getSound('song.mp3'), { volume: audioSettings.music ? 0.3 : 0, loop: true });
+  const { play: playSpin, stop: stopSpin } = useSound(getImmutableSound('slot.mp3'), { volume: audioSettings.sfx ? 0.05 : 0, loop: true });
+  const { play: playPeg } = useSound(getSound('peg.mp3'), { volume: audioSettings.sfx ? 1.0 : 0, multi: true });
+  const { play: playClick } = useSound(getSound('buttons.mp3'), { volume: audioSettings.sfx ? 0.25 : 0 });
   // Fireball SFX
-  const { play: playFireball, stop: stopFireball } = useSound('/Audio/fireball.mp3', { volume: audioSettings.sfx ? 0.3 : 0, loop: true });
-  const { play: playExplosion } = useSound('/Audio/explosion.mp3', { volume: audioSettings.sfx ? 1.0 : 0 });
-  const { play: playLucky } = useSound('/Audio/lucky.mp3', { volume: audioSettings.sfx ? 0.2 : 0 });
-  const { play: playBingo } = useSound('/Audio/BINGO!.mp3', { volume: audioSettings.sfx ? 0.3 : 0 });
+  const { play: playFireball, stop: stopFireball } = useSound(getImmutableSound('fireball.mp3'), { volume: audioSettings.sfx ? 0.3 : 0, loop: true });
+  const { play: playExplosion } = useSound(getImmutableSound('explosion.mp3'), { volume: audioSettings.sfx ? 1.0 : 0 });
+  const { play: playLucky } = useSound(getImmutableSound('lucky.mp3'), { volume: audioSettings.sfx ? 0.2 : 0 });
+  const { play: playBingo } = useSound(getImmutableSound('BINGO!.mp3'), { volume: audioSettings.sfx ? 0.3 : 0 });
 
   // Manage Background Music based on Game Phase
   useEffect(() => {
@@ -159,7 +168,7 @@ export default function App() {
     <div
       className="w-full h-[100dvh] flex flex-col relative overflow-hidden md:max-w-md mx-auto shadow-2xl md:border-x-2 border-gray-200 font-sans select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       style={{
-        backgroundImage: `url(${getAsset('Background.jpg')})`,
+        backgroundImage: `url(${getImage('Background.jpg')})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center'
       }}
@@ -177,6 +186,7 @@ export default function App() {
           playClick();
           setIsMenuOpen(true);
         }}
+        getImmutableImage={getImmutableImage}
       />
 
       <SideMenu
@@ -189,7 +199,11 @@ export default function App() {
       {/* Bingo Card (Compact: 85% width) */}
       <div className="flex-shrink-0 w-full flex justify-center pb-0 bg-white/10 backdrop-blur-md z-10 border-b border-white/20">
         <div className="w-[85%] max-w-[360px]">
-          <BingoCard card={bingoCard} level={level} />
+          <BingoCard
+            card={bingoCard}
+            level={level}
+            getImage={getImage}
+          />
         </div>
       </div>
 
@@ -201,6 +215,8 @@ export default function App() {
             onBallLanded={handleBallLanded}
             onPegHit={playPeg}
             vibrationEnabled={audioSettings.vibration}
+            getImage={getImage}
+            key={currentSkin} // Force re-mount on skin change
           />
         </div>
 
@@ -238,6 +254,7 @@ export default function App() {
             else if (type === 'magic') setShowMagicModal(true);
             // else console.log('PowerUp', type);
           }}
+          getImage={getImage}
         />
       </div>
 
@@ -295,6 +312,11 @@ export default function App() {
         onClose={() => setShowShopModal(false)}
         buyItem={buyItem}
         playClick={playClick}
+        coins={coins}
+        currentSkin={currentSkin}
+        setCurrentSkin={setCurrentSkin}
+        ownedSkins={ownedSkins}
+        unlockSkin={unlockSkin}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Flame, Wand2, Calculator } from 'lucide-react';
 
-export default function Footer({ phase, onSpin, onPowerUp, coins, balls }) {
+export default function Footer({ phase, onSpin, onPowerUp, coins, balls, getImage }) {
     const isSpinning = phase === 'SPIN';
     const canAffordFireball = coins >= 250;
     const canAffordMagic = coins >= 500;
@@ -10,7 +10,7 @@ export default function Footer({ phase, onSpin, onPowerUp, coins, balls }) {
         <div
             className="w-full h-[80px] border-t border-gray-200 flex items-center justify-between px-4 pt-2 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex-shrink-0"
             style={{
-                backgroundImage: "url('/Images/Standard/footerbg.png')",
+                backgroundImage: `url(${getImage('footerbg.png')})`,
                 backgroundSize: '100% 100%',
                 backgroundPosition: 'center'
             }}
@@ -28,7 +28,7 @@ export default function Footer({ phase, onSpin, onPowerUp, coins, balls }) {
                 disabled={phase === 'RESOLVE' || phase === 'GAME_OVER'}
             >
                 <img
-                    src="/Images/Standard/fireball.png"
+                    src={getImage('fireball.png')}
                     alt="Fireball"
                     className="w-full h-full object-contain"
                 />
@@ -46,7 +46,7 @@ export default function Footer({ phase, onSpin, onPowerUp, coins, balls }) {
         `}
             >
                 <img
-                    src="/Images/Standard/spin.png"
+                    src={getImage('spin.png')}
                     alt="Spin"
                     className="absolute inset-0 w-full h-full object-cover z-0"
                 />
@@ -66,7 +66,7 @@ export default function Footer({ phase, onSpin, onPowerUp, coins, balls }) {
                 disabled={phase === 'RESOLVE' || phase === 'GAME_OVER'}
             >
                 <img
-                    src="/Images/Standard/magicnumber.png"
+                    src={getImage('magicnumber.png')}
                     alt="Magic Number"
                     className="w-full h-full object-contain"
                 />

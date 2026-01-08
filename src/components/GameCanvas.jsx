@@ -8,7 +8,7 @@ const COLORS = {
     ball: '#ff0055ff'
 };
 
-const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true }, ref) => {
+const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true, getImage }, ref) => {
     const sceneRef = useRef(null);
     const engineRef = useRef(null);
     const renderRef = useRef(null);
@@ -81,7 +81,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true
                     lineWidth: 4
                 } : {
                     sprite: {
-                        texture: '/Images/Standard/ball.png',
+                        texture: getImage('ball.png'),
                         xScale: (ballRadius * 2) / 128, // Image is now 128px
                         yScale: (ballRadius * 2) / 128
                     }
@@ -183,7 +183,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true
                             isStatic: true,
                             render: {
                                 sprite: {
-                                    texture: '/Images/Standard/peg.png',
+                                    texture: getImage('peg.png'),
                                     xScale: (pegRadius * 2) / 64, // Assume 64px image
                                     yScale: (pegRadius * 2) / 64
                                 }
@@ -202,7 +202,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true
                             isStatic: true,
                             render: {
                                 sprite: {
-                                    texture: '/Images/Standard/peg.png',
+                                    texture: getImage('peg.png'),
                                     xScale: (pegRadiusSmall * 2) / 64,
                                     yScale: (pegRadiusSmall * 2) / 64
                                 }
@@ -259,7 +259,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true
                     frictionStatic: 0,
                     render: {
                         sprite: {
-                            texture: '/Images/Standard/triangle.png',
+                            texture: getImage('triangle.png'),
                             xScale: 40 / 80, // Target 40px width. Adjust if image is not 80px.
                             yScale: 90 / 180 // Target 90px height. Adjust if image is not 180px.
                         }

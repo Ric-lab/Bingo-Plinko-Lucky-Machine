@@ -15,7 +15,7 @@ const THEMES = [
     { header: '#8b5cf6', text: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
 ];
 
-export default function BingoCard({ card, level }) {
+export default function BingoCard({ card, level, getImage }) {
     if (!card || card.length === 0) return <div className="p-4 text-center">Loading...</div>;
 
     const currentLevel = level || 1;
@@ -33,7 +33,7 @@ export default function BingoCard({ card, level }) {
             <div
                 className="w-full max-w-[500px] p-1 shadow-2xl flex flex-col items-center rounded-xl"
                 style={{
-                    backgroundImage: 'url(/Images/Standard/card.png)',
+                    backgroundImage: `url(${getImage('card.png')})`,
                     backgroundSize: '100% 100%',
                     backgroundRepeat: 'no-repeat'
                 }}
@@ -44,7 +44,7 @@ export default function BingoCard({ card, level }) {
                     <div
                         className="flex items-center justify-center"
                         style={{
-                            backgroundImage: `url(/Images/Standard/${balloonImage})`,
+                            backgroundImage: `url(${getImage(balloonImage)})`,
                             backgroundSize: '100% 100%',
                             backgroundRepeat: 'no-repeat',
                             width: '90px',
@@ -62,7 +62,7 @@ export default function BingoCard({ card, level }) {
                     {COLS.map((letter, i) => (
                         <div key={i} className="flex items-center justify-center h-7 sm:h-9 relative">
                             <img
-                                src={`/Images/Standard/${letter}.png`}
+                                src={getImage(`${letter}.png`)}
                                 alt={letter}
                                 className="w-full h-full object-fill drop-shadow-sm"
                             />
@@ -103,7 +103,7 @@ export default function BingoCard({ card, level }) {
                                     </div>
                                 ) : (
                                     <img
-                                        src={isFree ? "/Images/Standard/freecell.png" : "/Images/Standard/cell.png"}
+                                        src={isFree ? getImage("freecell.png") : getImage("cell.png")}
                                         alt="Cell"
                                         className="absolute inset-0 w-full h-full object-fill pointer-events-none drop-shadow-sm"
                                     />

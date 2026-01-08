@@ -93,7 +93,7 @@ function checkBingo(card) {
 }
 
 export function useGameLogic() {
-    const [coins, setCoins] = useState(40000);
+    const [coins, setCoins] = useState(10000);
     const [balls, setBalls] = useState(50);
     const [level, setLevel] = useState(1);
     const [bingoCard, setBingoCard] = useState([]);
