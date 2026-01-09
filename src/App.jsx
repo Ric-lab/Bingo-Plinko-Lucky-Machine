@@ -46,7 +46,11 @@ export default function App() {
   } = useTheme();
 
   // Audio Hooks (BGM Volume 0.3, Pegs at 1.0)
-  const { play: playBGM, stop: stopBGM } = useSound(getSound('song.mp3'), { volume: audioSettings.music ? 0.3 : 0, loop: true });
+  // Ducking: Reduce volume by 75% (0.25 multiplier) during Lucky Spin
+  const baseBgmVolume = audioSettings.music ? 0.3 : 0;
+  const bgmVolume = phase === 'BONUS_WHEEL' ? baseBgmVolume * 0.9 : baseBgmVolume;
+
+  const { play: playBGM, stop: stopBGM } = useSound(getSound('song.mp3'), { volume: bgmVolume, loop: true });
   const { play: playSpin, stop: stopSpin } = useSound(getImmutableSound('slot.mp3'), { volume: audioSettings.sfx ? 0.05 : 0, loop: true });
   const { play: playPeg } = useSound(getSound('peg.mp3'), { volume: audioSettings.sfx ? 1.0 : 0, multi: true });
   const { play: playClick } = useSound(getSound('buttons.mp3'), { volume: audioSettings.sfx ? 0.25 : 0 });
@@ -54,7 +58,8 @@ export default function App() {
   const { play: playFireball, stop: stopFireball } = useSound(getImmutableSound('fireball.mp3'), { volume: audioSettings.sfx ? 0.3 : 0, loop: true });
   const { play: playExplosion } = useSound(getImmutableSound('explosion.mp3'), { volume: audioSettings.sfx ? 1.0 : 0 });
   const { play: playLucky } = useSound(getImmutableSound('lucky.mp3'), { volume: audioSettings.sfx ? 0.2 : 0 });
-  const { play: playBingo } = useSound(getImmutableSound('BINGO!.mp3'), { volume: audioSettings.sfx ? 0.3 : 0 });
+  const { play: playBingo } = useSound(getImmutableSound('BINGO!.mp3'), { volume: audioSettings.sfx ? 0.2 : 0 });
+  const { play: playPalheta } = useSound(getImmutableSound('palheta.mp3'), { volume: audioSettings.sfx ? 0.4 : 0 });
 
   // Manage Background Music based on Game Phase
   useEffect(() => {
@@ -334,6 +339,7 @@ export default function App() {
           spinLuckySpin={spinLuckySpin}
           completeLuckySpin={completeLuckySpin}
           reward={luckySpinReward}
+          playTicker={playPalheta}
         />
       )}
     </div>

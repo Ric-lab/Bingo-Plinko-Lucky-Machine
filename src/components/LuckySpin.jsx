@@ -7,10 +7,15 @@ const PRIZE_SLICES = [
     5, 50, 100, 250, 500, 1000, 2500, 5000, 7500, 10000
 ];
 
-export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward }) {
+export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, playTicker }) {
     const [uiState, setUiState] = useState('IDLE'); // IDLE, SPINNING, SHOW_RESULT
     const [rotation, setRotation] = useState(0);
     const [displayReward, setDisplayReward] = useState(null);
+
+    const wheelRef = useRef(null);
+    const lastSlotRef = useRef(0);
+    // Audio handled by parent via playTicker
+
 
     // Effect to handle the spin when specific reward is received
     useEffect(() => {
@@ -21,6 +26,58 @@ export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward }) 
             setUiState('SHOW_RESULT');
         }
     }, []); // On mount only
+
+    // Sound effect logic
+    useEffect(() => {
+        if (uiState !== 'SPINNING') return;
+
+        let animationFrameId;
+
+        const checkRotation = () => {
+            if (wheelRef.current) {
+                const style = window.getComputedStyle(wheelRef.current);
+                const matrix = style.transform;
+
+                if (matrix !== 'none') {
+                    // matrix(a, b, c, d, tx, ty)
+                    const values = matrix.split('(')[1].split(')')[0].split(',');
+                    const a = parseFloat(values[0]);
+                    const b = parseFloat(values[1]);
+
+                    // Calculate angle in degrees
+                    let angle = Math.round(Math.atan2(b, a) * (180 / Math.PI));
+
+                    // Normalize to 0-360 positive
+                    if (angle < 0) angle += 360;
+
+                    // Each slice is 36 degrees (360 / 10).
+                    // We check which "slot" index the wheel is currently in.
+                    // SHIFT: Add 18 degrees so the transition happens at the dividers, not the center.
+                    const currentSlot = Math.floor((angle + 18) / 36);
+
+                    if (currentSlot !== lastSlotRef.current) {
+                        // Play sound via prop with Pentatonic Pitch Variation
+                        if (playTicker) {
+                            // Pentatonic C Major Intervals: 0, 2, 4, 7, 9, 12
+                            const pentatonicSemitones = [0, 2, 4, 7, 9, 12];
+                            const randomSemitone = pentatonicSemitones[Math.floor(Math.random() * pentatonicSemitones.length)];
+                            const playbackRate = Math.pow(2, randomSemitone / 12);
+
+                            playTicker({ playbackRate });
+                        }
+                        lastSlotRef.current = currentSlot;
+                    }
+                }
+            }
+            animationFrameId = requestAnimationFrame(checkRotation);
+        };
+
+        animationFrameId = requestAnimationFrame(checkRotation);
+
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+        };
+    }, [uiState]);
 
     const handleSpin = () => {
         if (uiState !== 'IDLE') return;
@@ -115,6 +172,7 @@ export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward }) 
                     {/* Animation: 8s (8000ms) for maximum suspense */}
                     {/* Cubic Bezier (0.05, 0.7, 0.0, 1) -> Very fast start, extremely long slow-down */}
                     <div
+                        ref={wheelRef}
                         className="relative z-10 w-[98%] h-[98%] transition-transform duration-[8000ms]"
                         style={{
                             transform: `rotate(${rotation}deg)`,

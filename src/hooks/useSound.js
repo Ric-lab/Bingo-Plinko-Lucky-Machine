@@ -39,10 +39,11 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
         }
     }, [options.volume, options.loop]);
 
-    const play = useCallback(() => {
+    const play = useCallback((overrideOptions = {}) => {
         if (!audioRef.current) return;
 
         const opts = optionsRef.current;
+        const rate = overrideOptions.playbackRate || 1.0;
 
         if (opts.multi) {
             // Clone for overlapping sounds
@@ -50,6 +51,8 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
                 const available = poolRef.current.find(a => a.ended || a.paused);
                 if (available) {
                     available.currentTime = 0;
+                    available.volume = opts.volume; // Reset volume in case it changed
+                    available.playbackRate = rate;
                     available.play().catch(e => console.warn("Audio play error", e));
                     return;
                 }
@@ -57,6 +60,7 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
 
             const clone = audioRef.current.cloneNode();
             clone.volume = opts.volume;
+            clone.playbackRate = rate;
             clone.play().catch(e => console.warn("Audio play error", e));
             poolRef.current.push(clone);
 
@@ -74,6 +78,7 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
             }
             // CRITICAL: Force loop property before playing (Native Audio sometimes resets or ignores dynamic prop)
             audioRef.current.loop = opts.loop;
+            audioRef.current.playbackRate = rate;
             audioRef.current.play().catch(e => console.warn("Audio play error", e));
         }
     }, []);
