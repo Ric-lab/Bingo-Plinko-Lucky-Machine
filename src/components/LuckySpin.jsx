@@ -8,16 +8,8 @@ const PRIZE_SLICES = [
 ];
 
 export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, playTicker }) {
-    // INITIAL ROTATION LOGIC: Start with 10000 at the top
-    // 10000 is at Index 9 in PRIZE_SLICES.
-    // Each slice is 36 deg. Index 9 is at 9 * 36 = 324 deg.
-    // To bring it to 0 (top), we rotate by -324 deg (or +36 deg).
-    const startPrizeIndex = PRIZE_SLICES.indexOf(10000);
-    const sliceAngle = 360 / PRIZE_SLICES.length;
-    const initialRotation = startPrizeIndex !== -1 ? -(startPrizeIndex * sliceAngle) : 0;
-
     const [uiState, setUiState] = useState('IDLE'); // IDLE, SPINNING, SHOW_RESULT
-    const [rotation, setRotation] = useState(initialRotation);
+    const [rotation, setRotation] = useState(0);
     const [displayReward, setDisplayReward] = useState(null);
 
     const wheelRef = useRef(null);

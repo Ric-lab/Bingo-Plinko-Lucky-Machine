@@ -159,8 +159,8 @@ export function useGameLogic() {
 
     const nextLevel = () => {
         const nextLvl = level + 1;
-        // Check for Lucky Wheel Trigger (every 50 levels)
-        if (level % 50 === 0 && phase !== 'BONUS_WHEEL') {
+        // Check for Lucky Wheel Trigger (every 25 levels)
+        if (level % 25 === 0 && phase !== 'BONUS_WHEEL') {
             setPhase('BONUS_WHEEL');
             return;
         }
