@@ -8,8 +8,16 @@ const PRIZE_SLICES = [
 ];
 
 export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, playTicker }) {
+    // INITIAL ROTATION LOGIC: Start with 10000 at the top
+    // 10000 is at Index 9 in PRIZE_SLICES.
+    // Each slice is 36 deg. Index 9 is at 9 * 36 = 324 deg.
+    // To bring it to 0 (top), we rotate by -324 deg (or +36 deg).
+    const startPrizeIndex = PRIZE_SLICES.indexOf(10000);
+    const sliceAngle = 360 / PRIZE_SLICES.length;
+    const initialRotation = startPrizeIndex !== -1 ? -(startPrizeIndex * sliceAngle) : 0;
+
     const [uiState, setUiState] = useState('IDLE'); // IDLE, SPINNING, SHOW_RESULT
-    const [rotation, setRotation] = useState(0);
+    const [rotation, setRotation] = useState(initialRotation);
     const [displayReward, setDisplayReward] = useState(null);
 
     const wheelRef = useRef(null);
@@ -135,7 +143,7 @@ export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, pl
             <div className="relative z-10 flex flex-col items-center max-w-md w-full gap-8">
 
                 {/* Header */}
-                <div className="text-center space-y-2 translate-y-[-4rem]">
+                <div className="text-center space-y-2 translate-y-[-3rem]">
                     <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-orange-400 to-yellow-300 animate-text-shimmer drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] uppercase tracking-widest">
                         Lucky Spin
                     </h2>

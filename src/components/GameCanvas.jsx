@@ -8,7 +8,7 @@ const COLORS = {
     ball: '#ff0055ff'
 };
 
-const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true, getImage }, ref) => {
+const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, getImage }, ref) => {
     const sceneRef = useRef(null);
     const engineRef = useRef(null);
     const renderRef = useRef(null);
@@ -344,7 +344,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true
                         }
 
                         // 2. Haptic
-                        if (vibrationEnabled && navigator.vibrate) navigator.vibrate(15);
+                        if (vibrationLevel > 0 && navigator.vibrate) navigator.vibrate(15 * vibrationLevel);
 
                         // 3. Visual (Light Up)
                         // Save the peg position and time to the map
@@ -390,8 +390,8 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true
                         // --- FIREBALL IMPACT EFFECT ---
                         if (ball.label === 'fireball') {
                             // 1. Heavy Vibrate
-                            if (vibrationEnabled && navigator.vibrate) {
-                                navigator.vibrate([100, 50, 100]); // 100ms vib, 50ms pause, 100ms vib
+                            if (vibrationLevel > 0 && navigator.vibrate) {
+                                navigator.vibrate([100 * vibrationLevel, 50 * vibrationLevel, 100 * vibrationLevel]); // Scaled vibration
                             }
                             // 2. Trigger Shake
                             setShake(true);
@@ -409,7 +409,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationEnabled = true
                             if (playHitRef.current && ball.label !== 'fireball') {
                                 playHitRef.current();
                             }
-                            if (vibrationEnabled && navigator.vibrate) navigator.vibrate(10);
+                            if (vibrationLevel > 0 && navigator.vibrate) navigator.vibrate(10 * vibrationLevel);
                             ball.hasHitFloor = true;
                         }
 

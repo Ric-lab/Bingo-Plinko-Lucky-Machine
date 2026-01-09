@@ -24,9 +24,9 @@ import LuckySpin from './components/LuckySpin';
 export default function App() {
   // Global Settings (Defined early to use in hooks)
   const [audioSettings, setAudioSettings] = useState({
-    music: true,
-    sfx: true,
-    vibration: true
+    music: 1, // 0: Off, 0.5: Low, 1: High
+    sfx: 1,
+    vibration: 1
   });
 
   const {
@@ -47,19 +47,19 @@ export default function App() {
 
   // Audio Hooks (BGM Volume 0.3, Pegs at 1.0)
   // Ducking: Reduce volume by 75% (0.25 multiplier) during Lucky Spin
-  const baseBgmVolume = audioSettings.music ? 0.3 : 0;
+  const baseBgmVolume = 0.3 * audioSettings.music;
   const bgmVolume = phase === 'BONUS_WHEEL' ? baseBgmVolume * 0.9 : baseBgmVolume;
 
   const { play: playBGM, stop: stopBGM } = useSound(getSound('song.mp3'), { volume: bgmVolume, loop: true });
-  const { play: playSpin, stop: stopSpin } = useSound(getImmutableSound('slot.mp3'), { volume: audioSettings.sfx ? 0.05 : 0, loop: true });
-  const { play: playPeg } = useSound(getSound('peg.mp3'), { volume: audioSettings.sfx ? 1.0 : 0, multi: true });
-  const { play: playClick } = useSound(getSound('buttons.mp3'), { volume: audioSettings.sfx ? 0.25 : 0 });
+  const { play: playSpin, stop: stopSpin } = useSound(getImmutableSound('slot.mp3'), { volume: 0.05 * audioSettings.sfx, loop: true });
+  const { play: playPeg } = useSound(getSound('peg.mp3'), { volume: 1.0 * audioSettings.sfx, multi: true });
+  const { play: playClick } = useSound(getSound('buttons.mp3'), { volume: 0.25 * audioSettings.sfx });
   // Fireball SFX
-  const { play: playFireball, stop: stopFireball } = useSound(getImmutableSound('fireball.mp3'), { volume: audioSettings.sfx ? 0.3 : 0, loop: true });
-  const { play: playExplosion } = useSound(getImmutableSound('explosion.mp3'), { volume: audioSettings.sfx ? 1.0 : 0 });
-  const { play: playLucky } = useSound(getImmutableSound('lucky.mp3'), { volume: audioSettings.sfx ? 0.2 : 0 });
-  const { play: playBingo } = useSound(getImmutableSound('BINGO!.mp3'), { volume: audioSettings.sfx ? 0.2 : 0 });
-  const { play: playPalheta } = useSound(getImmutableSound('palheta.mp3'), { volume: audioSettings.sfx ? 0.4 : 0 });
+  const { play: playFireball, stop: stopFireball } = useSound(getImmutableSound('fireball.mp3'), { volume: 0.3 * audioSettings.sfx, loop: true });
+  const { play: playExplosion } = useSound(getImmutableSound('explosion.mp3'), { volume: 1.0 * audioSettings.sfx });
+  const { play: playLucky } = useSound(getImmutableSound('lucky.mp3'), { volume: 0.2 * audioSettings.sfx });
+  const { play: playBingo } = useSound(getImmutableSound('BINGO!.mp3'), { volume: 0.2 * audioSettings.sfx });
+  const { play: playPalheta } = useSound(getImmutableSound('palheta.mp3'), { volume: 0.4 * audioSettings.sfx });
 
   // Manage Background Music based on Game Phase
   useEffect(() => {
@@ -220,7 +220,7 @@ export default function App() {
             ref={canvasRef}
             onBallLanded={handleBallLanded}
             onPegHit={playPeg}
-            vibrationEnabled={audioSettings.vibration}
+            vibrationLevel={audioSettings.vibration}
             getImage={getImage}
             key={currentSkin} // Force re-mount on skin change
           />

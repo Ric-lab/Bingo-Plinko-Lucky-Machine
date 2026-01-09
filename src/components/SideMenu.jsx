@@ -4,7 +4,20 @@ import { X, Home, Settings, HelpCircle, LogOut, Music, Volume2, Smartphone } fro
 export default function SideMenu({ isOpen, onClose, settings, onUpdateSettings }) {
 
     const toggleSetting = (key) => {
-        onUpdateSettings(prev => ({ ...prev, [key]: !prev[key] }));
+        onUpdateSettings(prev => {
+            const current = prev[key];
+            // Cycle: 1 (High) -> 0 (Off) -> 0.5 (Low) -> 1 (High)
+            // Or typically: Off -> Low -> High -> Off
+            // Let's do: 1 -> 0 -> 0.5 -> 1 (User requested "Off -> 50% -> 100%" implicitly by asking for middle term)
+            // Let's do logical cycle: 0 -> 0.5 -> 1 -> 0
+
+            let next;
+            if (current === 0) next = 0.5;
+            else if (current === 0.5) next = 1;
+            else next = 0; // if 1 or anything else
+
+            return { ...prev, [key]: next };
+        });
     };
 
     return (
@@ -42,19 +55,19 @@ export default function SideMenu({ isOpen, onClose, settings, onUpdateSettings }
                             <ToggleItem
                                 icon={<Music size={18} />}
                                 label="Music"
-                                isOn={settings?.music}
+                                value={settings?.music}
                                 onToggle={() => toggleSetting('music')}
                             />
                             <ToggleItem
                                 icon={<Volume2 size={18} />}
                                 label="Sound Effects"
-                                isOn={settings?.sfx}
+                                value={settings?.sfx}
                                 onToggle={() => toggleSetting('sfx')}
                             />
                             <ToggleItem
                                 icon={<Smartphone size={18} />}
                                 label="Vibration"
-                                isOn={settings?.vibration}
+                                value={settings?.vibration}
                                 onToggle={() => toggleSetting('vibration')}
                             />
                         </div>
@@ -89,21 +102,40 @@ function MenuItem({ icon, label, onClick, active }) {
     );
 }
 
-function ToggleItem({ icon, label, isOn, onToggle }) {
+function ToggleItem({ icon, label, value, onToggle }) {
+    // value: 0 (Off), 0.5 (Low), 1 (High)
+
+    // Determine visuals
+    let bgClass = 'bg-gray-300';
+    let translateClass = 'translate-x-0';
+
+    if (value === 1) {
+        bgClass = 'bg-green-500';
+        translateClass = 'translate-x-5';
+    } else if (value === 0.5) {
+        bgClass = 'bg-yellow-400';
+        translateClass = 'translate-x-2.5'; // Middle
+    }
+
     return (
         <div className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors">
             <div className="flex items-center gap-3 text-gray-600">
                 {icon}
                 <span className="font-medium text-sm">{label}</span>
             </div>
-            <button
-                onClick={onToggle}
-                className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ${isOn ? 'bg-green-500' : 'bg-gray-300'}`}
-            >
-                <div
-                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${isOn ? 'translate-x-5' : 'translate-x-0'}`}
-                />
-            </button>
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-gray-400 w-6 text-right">
+                    {value === 0 ? 'OFF' : (value === 0.5 ? '50%' : 'MAX')}
+                </span>
+                <button
+                    onClick={onToggle}
+                    className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ${bgClass}`}
+                >
+                    <div
+                        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${translateClass}`}
+                    />
+                </button>
+            </div>
         </div>
     );
 }
