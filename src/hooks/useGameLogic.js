@@ -95,7 +95,7 @@ function checkBingo(card) {
 export function useGameLogic() {
     const [coins, setCoins] = useState(10000);
     const [balls, setBalls] = useState(50);
-    const [level, setLevel] = useState(1);
+    const [level, setLevel] = useState(50);
     const [bingoCard, setBingoCard] = useState([]);
     const [slotsResult, setSlotsResult] = useState([0, 0, 0, 0, 0]);
     const [isGameOver, setIsGameOver] = useState(false);
@@ -106,8 +106,9 @@ export function useGameLogic() {
     const [mercyTrack, setMercyTrack] = useState({});
     const [magicActive, setMagicActive] = useState(false);
 
-    // PHASE: 'SPIN' (Modal showing) | 'SPINNING' (Slot animation) | 'DROP' (Waiting for click) | 'RESOLVE' (Ball falling)
+    // PHASE: 'SPIN' | 'SPINNING' | 'DROP' | 'RESOLVE' | 'GAME_OVER' | 'VICTORY' | 'BONUS_WHEEL'
     const [phase, setPhase] = useState('SPIN');
+    const [luckySpinReward, setLuckySpinReward] = useState(null); // Store reward for display
 
 
     // Initialize Level
@@ -157,8 +158,45 @@ export function useGameLogic() {
     }, [initLevel]);
 
     const nextLevel = () => {
+        const nextLvl = level + 1;
+        // Check for Lucky Wheel Trigger (every 50 levels)
+        if (level % 50 === 0 && phase !== 'BONUS_WHEEL') {
+            setPhase('BONUS_WHEEL');
+            return;
+        }
+
         setLevel(prev => prev + 1);
         // initLevel will automatically trigger via useEffect because it depends on level
+    };
+
+    // LUCKY WHEEL LOGIC
+    const spinLuckySpin = () => {
+        // Weighted Probabilities (Total 100%)
+        // 5: 0.4%, 50: 0.5%, 100: 2.5%, 250: 10%, 500: 19%, 1000: 40%
+        // 2500: 25%, 5000: 2.0%, 7500: 0.5%, 10000: 0.1%
+        const r = Math.random() * 100; // 0 to 100
+        let reward = 0;
+
+        if (r < 0.4) reward = 5;
+        else if (r < 0.9) reward = 50;   // 0.4 + 0.5
+        else if (r < 3.4) reward = 100;  // 0.9 + 2.5
+        else if (r < 13.4) reward = 250; // 3.4 + 10
+        else if (r < 32.4) reward = 500; // 13.4 + 19
+        else if (r < 72.4) reward = 1000; // 32.4 + 40
+        else if (r < 97.4) reward = 2500; // 72.4 + 25
+        else if (r < 99.4) reward = 5000; // 97.4 + 2.0
+        else if (r < 99.9) reward = 7500; // 99.4 + 0.5
+        else reward = 10000;              // Remaining 0.1%
+
+        setCoins(prev => prev + reward);
+        setLuckySpinReward(reward);
+        return reward;
+    };
+
+    const completeLuckySpin = () => {
+        setLuckySpinReward(null);
+        setLevel(prev => prev + 1); // Advance to 51, 101, etc.
+        // initLevel will handle the reset
     };
 
     // Trigger Spin Logic with SMART RNG
@@ -540,8 +578,14 @@ export function useGameLogic() {
         return false;
     };
 
+    const forceWin = () => {
+        setWinState(true);
+        setIsGameOver(true);
+        setPhase('GAME_OVER');
+    };
+
     return {
-        state: { coins, balls, level, bingoCard, slotsResult, isGameOver, winState, phase, fireBallActive, magicActive },
-        actions: { initLevel, startSpin, completeSpin, dropBall, resolveTurn, buyItem, nextLevel }
+        state: { coins, balls, level, bingoCard, slotsResult, isGameOver, winState, phase, fireBallActive, magicActive, luckySpinReward },
+        actions: { initLevel, startSpin, completeSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, completeLuckySpin, forceWin }
     };
 }

@@ -19,6 +19,7 @@ import GameOverModal from './components/Modal/GameOverModal';
 import NextLevelModal from './components/Modal/NextLevelModal';
 import FireballModal from './components/Modal/FireballModal';
 import ShopModal from './components/Modal/ShopModal';
+import LuckySpin from './components/LuckySpin';
 
 export default function App() {
   // Global Settings (Defined early to use in hooks)
@@ -29,8 +30,8 @@ export default function App() {
   });
 
   const {
-    state: { coins, balls, level, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive },
-    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel }
+    state: { coins, balls, level, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive, luckySpinReward },
+    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, completeLuckySpin, forceWin }
   } = useGameLogic();
 
   const {
@@ -258,6 +259,15 @@ export default function App() {
         />
       </div>
 
+      {/* DEBUG BUTTON */}
+      <button
+        onClick={() => forceWin()}
+        className="fixed top-20 left-4 bg-red-600/80 text-white z-50 p-2 text-xs rounded-md shadow-lg"
+        id="debug-win-btn"
+      >
+        FORCE WIN (Lvl 50)
+      </button>
+
       <MagicNumberModal
         isOpen={showMagicModal}
         onClose={() => setShowMagicModal(false)}
@@ -318,6 +328,14 @@ export default function App() {
         ownedSkins={ownedSkins}
         unlockSkin={unlockSkin}
       />
+      {/* Lucky Wheel Bonus Phase */}
+      {phase === 'BONUS_WHEEL' && (
+        <LuckySpin
+          spinLuckySpin={spinLuckySpin}
+          completeLuckySpin={completeLuckySpin}
+          reward={luckySpinReward}
+        />
+      )}
     </div>
   );
 }
