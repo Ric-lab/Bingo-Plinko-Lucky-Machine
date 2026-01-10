@@ -79,7 +79,7 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
             // CRITICAL: Force loop property before playing (Native Audio sometimes resets or ignores dynamic prop)
             audioRef.current.loop = opts.loop;
             audioRef.current.playbackRate = rate;
-            audioRef.current.play().catch(e => console.warn("Audio play error", e));
+            return audioRef.current.play();
         }
     }, []);
 

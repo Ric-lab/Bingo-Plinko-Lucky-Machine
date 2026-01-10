@@ -45,11 +45,15 @@ export default function App() {
     getImmutableSound
   } = useTheme();
 
+  // Home Screen State (Moved to top for audio logic accessibility)
+  const [gameStarted, setGameStarted] = useState(false);
+
   // Audio Hooks (BGM Volume 0.3, Pegs at 1.0)
   // Ducking: Reduce volume by 75% (0.25 multiplier) during Lucky Spin
   const baseBgmVolume = 0.3 * audioSettings.music;
   const bgmVolume = phase === 'BONUS_WHEEL' ? baseBgmVolume * 0.9 : baseBgmVolume;
 
+  const { play: playTheme, stop: stopTheme } = useSound(getImmutableSound('Theme.mp3'), { volume: baseBgmVolume, loop: true });
   const { play: playBGM, stop: stopBGM } = useSound(getSound('song.mp3'), { volume: bgmVolume, loop: true });
   const { play: playSpin, stop: stopSpin } = useSound(getImmutableSound('slot.mp3'), { volume: 0.05 * audioSettings.sfx, loop: true });
   const { play: playPeg } = useSound(getSound('peg.mp3'), { volume: 1.0 * audioSettings.sfx, multi: true });
@@ -61,12 +65,34 @@ export default function App() {
   const { play: playBingo } = useSound(getImmutableSound('BINGO!.mp3'), { volume: 0.2 * audioSettings.sfx });
   const { play: playPalheta } = useSound(getImmutableSound('palheta.mp3'), { volume: 0.4 * audioSettings.sfx });
 
-  // Manage Background Music based on Game Phase
+  // Manage Background Music based on Game Phase and Home Screen
   useEffect(() => {
+    // If on Home Screen, play Theme and stop Game Music
+    if (!gameStarted) {
+      if (audioSettings.music > 0) {
+        playTheme();
+      }
+      stopBGM();
+
+      // Fallback for autoplay policy on Home Screen
+      const handleHomeInteraction = () => {
+        // Retry playing
+        playTheme();
+        window.removeEventListener('click', handleHomeInteraction);
+      };
+      window.addEventListener('click', handleHomeInteraction);
+      return () => {
+        window.removeEventListener('click', handleHomeInteraction);
+        stopTheme(); // Ensure theme stops when effect re-runs or unmounts
+      };
+    }
+
+    // GAME LOOP MUSIC
     // There is no 'PLAYING' phase. The active phases are 'SPIN', 'SPINNING', 'DROP', 'RESOLVE'.
     const isGameActive = (phase !== 'GAME_OVER' && phase !== 'VICTORY');
 
-    if (isGameActive) {
+    if (isGameActive && gameStarted) {
+      stopTheme(); // Ensure Theme is stopped
       playBGM();
 
       // FALLBACK: If autoplay blocked, try again on first interaction
@@ -76,13 +102,13 @@ export default function App() {
         window.removeEventListener('click', handleInteraction);
       };
       window.addEventListener('click', handleInteraction);
-
       return () => window.removeEventListener('click', handleInteraction);
 
     } else {
       stopBGM();
+      if (gameStarted) stopTheme(); // Double confirm
     }
-  }, [phase, playBGM, stopBGM]);
+  }, [phase, gameStarted, playBGM, stopBGM, playTheme, stopTheme, audioSettings.music]);
 
   // Manage Spin Sound
   useEffect(() => {
@@ -179,6 +205,55 @@ export default function App() {
         backgroundPosition: 'center'
       }}
     >
+      {/* HOME SCREEN OVERLAY */}
+      {!gameStarted && (
+        <div
+          className="absolute inset-0 z-[60] bg-black flex flex-col items-center justify-center"
+        >
+          {/* Background Image */}
+          <img
+            src={getImmutableImage('Home.png')}
+            alt="Background"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+
+          {/* Game Mode Buttons */}
+          <div className="relative z-10 flex flex-col gap-6 items-center mt-[40vh]">
+            {/* Bingo (Coming Soon) */}
+            <button
+              onClick={() => {
+                playClick();
+                showMessage('info', 'COMING SOON', 'This mode is still under construction! 🚧');
+              }}
+              className="w-64 transition-transform hover:scale-105 active:scale-95"
+            >
+              <img src={getImmutableImage('BingoButton.png')} alt="Bingo" className="w-full drop-shadow-2xl" />
+            </button>
+
+            {/* 5 Row (Current Game) */}
+            <button
+              onClick={() => {
+                playClick();
+                setGameStarted(true);
+              }}
+              className="w-64 transition-transform hover:scale-105 active:scale-95"
+            >
+              <img src={getImmutableImage('FingoButton.png')} alt="Fingo" className="w-full drop-shadow-2xl" />
+            </button>
+
+            {/* Spingo (Coming Soon) */}
+            <button
+              onClick={() => {
+                playClick();
+                showMessage('info', 'COMING SOON', 'This mode is still under construction! 🚧');
+              }}
+              className="w-64 transition-transform hover:scale-105 active:scale-95"
+            >
+              <img src={getImmutableImage('SpingoButton.png')} alt="Spingo" className="w-full drop-shadow-2xl" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <Header
         coins={coins}
