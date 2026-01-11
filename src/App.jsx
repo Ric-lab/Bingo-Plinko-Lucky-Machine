@@ -23,16 +23,21 @@ import LuckySpin from './components/LuckySpin';
 
 export default function App() {
   // Global Settings (Defined early to use in hooks)
+  // Global Settings (Defined early to use in hooks)
   const [audioSettings, setAudioSettings] = useState({
     music: 1, // 0: Off, 0.5: Low, 1: High
     sfx: 1,
     vibration: 1
   });
 
+  // Home Screen State (Moved to top for audio logic accessibility)
+  const [gameStarted, setGameStarted] = useState(false);
+  const [gameMode, setGameMode] = useState('FINGO');
+
   const {
     state: { coins, balls, level, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive, luckySpinReward },
     actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, completeLuckySpin, forceWin }
-  } = useGameLogic();
+  } = useGameLogic(gameMode);
 
   const {
     currentSkin,
@@ -44,9 +49,6 @@ export default function App() {
     getSound,
     getImmutableSound
   } = useTheme();
-
-  // Home Screen State (Moved to top for audio logic accessibility)
-  const [gameStarted, setGameStarted] = useState(false);
 
   // Audio Hooks (BGM Volume 0.3, Pegs at 1.0)
   // Ducking: Reduce volume by 75% (0.25 multiplier) during Lucky Spin
@@ -63,7 +65,7 @@ export default function App() {
   const { play: playExplosion } = useSound(getImmutableSound('explosion.mp3'), { volume: 1.0 * audioSettings.sfx });
   const { play: playLucky } = useSound(getImmutableSound('lucky.mp3'), { volume: 0.2 * audioSettings.sfx });
   const { play: playBingo } = useSound(getImmutableSound('BINGO!.mp3'), { volume: 0.2 * audioSettings.sfx });
-  const { play: playPalheta } = useSound(getImmutableSound('palheta.mp3'), { volume: 0.4 * audioSettings.sfx });
+  const { play: playPalheta } = useSound(getImmutableSound('palheta.mp3'), { volume: 0.7 * audioSettings.sfx });
 
   // Manage Background Music based on Game Phase and Home Screen
   useEffect(() => {
@@ -219,21 +221,23 @@ export default function App() {
 
           {/* Game Mode Buttons */}
           <div className="relative z-10 flex flex-col gap-6 items-center mt-[40vh]">
-            {/* Bingo (Coming Soon) */}
+            {/* Bingo (New Mode) */}
             <button
               onClick={() => {
                 playClick();
-                showMessage('info', 'COMING SOON', 'This mode is still under construction! 🚧');
+                setGameMode('BINGO');
+                setGameStarted(true);
               }}
               className="w-64 transition-transform hover:scale-105 active:scale-95"
             >
               <img src={getImmutableImage('BingoButton.png')} alt="Bingo" className="w-full drop-shadow-2xl" />
             </button>
 
-            {/* 5 Row (Current Game) */}
+            {/* Fingo (Standard Mode) */}
             <button
               onClick={() => {
                 playClick();
+                setGameMode('FINGO');
                 setGameStarted(true);
               }}
               className="w-64 transition-transform hover:scale-105 active:scale-95"
@@ -241,11 +245,12 @@ export default function App() {
               <img src={getImmutableImage('FingoButton.png')} alt="Fingo" className="w-full drop-shadow-2xl" />
             </button>
 
-            {/* Spingo (Coming Soon) */}
+            {/* Spingo (New Mode) */}
             <button
               onClick={() => {
                 playClick();
-                showMessage('info', 'COMING SOON', 'This mode is still under construction! 🚧');
+                setGameMode('SPINGO');
+                setGameStarted(true);
               }}
               className="w-64 transition-transform hover:scale-105 active:scale-95"
             >

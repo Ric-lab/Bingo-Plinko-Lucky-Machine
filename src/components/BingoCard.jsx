@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Theme Configuration
-const COLS = ['B', 'I', 'N', 'G', 'O'];
+const COLS = ['L', 'U', 'C', 'K', 'Y'];
 const THEMES = [
     // B - Rose
     { header: '#f43f5e', text: '#e11d48', bg: '#fff1f2', border: '#fecdd3' },

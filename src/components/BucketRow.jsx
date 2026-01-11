@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const COLS = ['B', 'I', 'N', 'G', 'O'];
+const COLS = ['L', 'U', 'C', 'K', 'Y'];
 
 const PIPE_COLORS = [
     { base: 'bg-rose-500', rim: 'bg-rose-600', hue: 'rose' },
