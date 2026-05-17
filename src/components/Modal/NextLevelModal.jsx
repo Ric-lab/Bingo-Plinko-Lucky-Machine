@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { useSound } from '../../hooks/useSound';
 
 export default function NextLevelModal({
     level,

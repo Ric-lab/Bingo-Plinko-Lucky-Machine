@@ -35,16 +35,9 @@ export function calculateProbabilities(currentLevel) {
     // Calculate t (0.0 at level 1, 1.0 at level 500)
     const t = (effectiveLevel - 1) / (maxLevel - 1);
 
-    // Lerp values
     const p1 = lerp(0.34, 0.95, t);
     const p2 = lerp(0.33, 0.04, t);
     const p3 = lerp(0.33, 0.01, t);
-
-    // Normalize slightly to ensure perfect 1.0 sum (though JS precision usually handles this ok for simple floats, better safe)
-    // Actually, lerp preserves sum if startSum == endSum.
-    // 0.34+0.33+0.33 = 1.0
-    // 0.95+0.04+0.01 = 1.0
-    // So sum should be fine.
 
     return {
         one: p1,

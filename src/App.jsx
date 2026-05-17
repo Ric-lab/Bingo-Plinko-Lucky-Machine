@@ -1,5 +1,4 @@
 import { useRef, useState, useEffect } from 'react';
-import { Flame } from 'lucide-react';
 import Header from './components/Header';
 import BingoCard from './components/BingoCard';
 import GameCanvas from './components/GameCanvas';
@@ -10,11 +9,8 @@ import { useGameLogic } from './hooks/useGameLogic';
 import { useTheme } from './hooks/useTheme';
 import { useSound } from './hooks/useSound';
 
-
-
 import MagicNumberModal from './components/Modal/MagicNumberModal';
 import MessageModal from './components/Modal/MessageModal';
-// import ConfirmationModal from './components/Modal/ConfirmationModal'; // Removed as it was only used for Fireball
 import GameOverModal from './components/Modal/GameOverModal';
 import NextLevelModal from './components/Modal/NextLevelModal';
 import FireballModal from './components/Modal/FireballModal';
@@ -22,15 +18,12 @@ import ShopModal from './components/Modal/ShopModal';
 import LuckySpin from './components/LuckySpin';
 
 export default function App() {
-  // Global Settings (Defined early to use in hooks)
-  // Global Settings (Defined early to use in hooks)
   const [audioSettings, setAudioSettings] = useState({
     music: 1, // 0: Off, 0.5: Low, 1: High
     sfx: 1,
     vibration: 1
   });
 
-  // Home Screen State (Moved to top for audio logic accessibility)
   const [gameStarted, setGameStarted] = useState(false);
   const [gameMode, setGameMode] = useState('FINGO');
 
@@ -50,8 +43,7 @@ export default function App() {
     getImmutableSound
   } = useTheme();
 
-  // Audio Hooks (BGM Volume 0.3, Pegs at 1.0)
-  // Ducking: Reduce volume by 75% (0.25 multiplier) during Lucky Spin
+  // Audio: ducks BGM to 90% during Lucky Spin so the wheel ticker stays audible.
   const baseBgmVolume = 0.3 * audioSettings.music;
   const bgmVolume = phase === 'BONUS_WHEEL' ? baseBgmVolume * 0.9 : baseBgmVolume;
 
@@ -262,8 +254,6 @@ export default function App() {
 
       <Header
         coins={coins}
-        balls={balls}
-        level={level}
         onOpenShop={() => {
           playClick();
           setShowShopModal(true);
@@ -310,16 +300,12 @@ export default function App() {
         <BucketRow
           slotsResult={slotsResult}
           bingoCard={bingoCard}
-          onSlotClick={handleSlotClick} // Input moved here
+          onSlotClick={handleSlotClick}
           phase={phase}
           fireBallActive={fireBallActive}
           magicActive={magicActive}
           playClick={playClick}
         />
-
-
-
-        {/* Visual Feedback Overlay (Inside Physics Area) - REMOVED, using Modal now */}
       </div>
 
       {/* Compact Footer */}
@@ -338,19 +324,18 @@ export default function App() {
               setShowFireballConfirm(true);
             }
             else if (type === 'magic') setShowMagicModal(true);
-            // else console.log('PowerUp', type);
           }}
           getImage={getImage}
         />
       </div>
 
-      {/* DEBUG BUTTON */}
+      {/* DEBUG: jump to Lucky Spin (roleta). REMOVE BEFORE PRODUCTION. */}
       <button
         onClick={() => forceWin()}
         className="fixed top-20 left-4 bg-red-600/80 text-white z-50 p-2 text-xs rounded-md shadow-lg"
         id="debug-win-btn"
       >
-        FORCE WIN (Lvl 50)
+        GO TO LUCKY SPIN
       </button>
 
       <MagicNumberModal

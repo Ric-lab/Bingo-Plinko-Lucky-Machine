@@ -186,7 +186,6 @@ export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, pl
                         />
                     </div>
 
-                    {/* Result Overlay Removed - Moved to Header */}
                 </div>
 
                 {/* Action Area */}

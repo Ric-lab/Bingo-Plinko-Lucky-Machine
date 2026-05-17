@@ -1,5 +1,4 @@
 import React from 'react';
-import { Flame, Wand2, Calculator } from 'lucide-react';
 
 export default function Footer({ phase, onSpin, onPowerUp, coins, balls, getImage }) {
     const isSpinning = phase === 'SPIN';
@@ -16,8 +15,7 @@ export default function Footer({ phase, onSpin, onPowerUp, coins, balls, getImag
             }}
         >
 
-            {/* Fireball (Triangle-ish) */}
-            {/* Fireball (Asset) */}
+            {/* Fireball */}
             <button
                 onClick={() => onPowerUp('fireball')}
                 className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 active:mt-1 transition-all disabled:opacity-50 overflow-hidden p-1

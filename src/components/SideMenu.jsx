@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Home, Settings, HelpCircle, LogOut, Music, Volume2, Smartphone } from 'lucide-react';
+import { X, HelpCircle, Music, Volume2, Smartphone } from 'lucide-react';
 
 export default function SideMenu({ isOpen, onClose, settings, onUpdateSettings }) {
 

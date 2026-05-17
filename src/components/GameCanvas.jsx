@@ -8,6 +8,40 @@ const COLORS = {
     ball: '#ff0055ff'
 };
 
+// ============================================================================
+// PHYSICS_CONFIG — tune the gameplay feel here. All ratios scale with screen.
+// ============================================================================
+const PHYSICS_CONFIG = {
+    // --- Ball ---
+    BALL_RADIUS_RATIO: 0.027,       // % of canvas width
+    BALL_RESTITUTION: 0.75,         // bounciness on collision (0-1)
+    BALL_FRICTION: 0.005,
+    BALL_FRICTION_AIR: 0.01,
+    BALL_DENSITY: 1.5,              // heavier mass = more momentum
+    BALL_INITIAL_X_CHAOS: 3,        // max abs horizontal velocity at drop (prevents straight fall)
+
+    // --- Pegs ---
+    PEG_RADIUS_RATIO: 0.021,        // large pegs (even rows)
+    PEG_RADIUS_SMALL_RATIO: 0.013,  // small pegs (odd rows, interleaved)
+    PEG_RESTITUTION_LARGE: 0.9,     // bouncy but loses energy
+    PEG_RESTITUTION_SMALL: 1.0,     // perfect bounce (was 1.5 — amplified energy → crazy bouncing)
+    PEG_ACTIVE_FORCE: 0.05,         // extra kick on hit (creates "relevant" direction change)
+    PEG_COLS: 7,                    // horizontal density
+
+    // --- Rows are computed dynamically — target this row-gap relative to ball ---
+    PEG_ROW_GAP_RATIO: 2.4,         // target vertical gap = this × ball diameter
+    PEG_ROWS_MIN: 10,               // short screens
+    PEG_ROWS_MAX: 16,               // tall screens
+
+    // --- Walls ---
+    WALL_RESTITUTION: 1.3,          // bouncy edges
+    WALL_KICK_X: 0.15,              // active push inward when ball touches wall
+    WALL_KICK_Y: -0.05,             // slight upward lift on wall hit
+
+    // --- World ---
+    GRAVITY_Y: 1.2,
+};
+
 const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, getImage }, ref) => {
     const sceneRef = useRef(null);
     const engineRef = useRef(null);
@@ -42,18 +76,9 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
             // const TOTAL_BINS = 5; // Unused for drop logic now
 
             // PEG DENSITY (Decoupled from Bins)
-            // We want 7 columns of pegs to keep it "tight"
-            const PEG_COLS = 7;
-            const pegSpacing = width / PEG_COLS;
+            const pegSpacing = width / PHYSICS_CONFIG.PEG_COLS;
 
-            // FIXED DROP POINTS (B-I-N-G-O)
-            // User requested specific alignment:
-            // B (0) -> Col 1 (2nd small peg row)
-            // I (1) -> Col 2 (3rd small peg row)
-            // N (2) -> Col 3 (4th small peg row - Center)
-            // G (3) -> Col 4 (5th small peg row)
-            // O (4) -> Col 5 (6th small peg row)
-
+            // FIXED DROP POINTS aligned to peg columns (1..5 of 7)
             let startX;
 
             if (isFireBall) {
@@ -63,18 +88,16 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                 startX = (colIdx * binW) + (binW / 2);
             } else {
                 // NORMAL BALL: Aligned to specific Peg Columns (Challenge)
-                // Map colIdx (0-4) to Peg Column Index (1-5)
                 const targetPegCol = colIdx + 1;
-                // Start center of the chosen PEG column
                 startX = (targetPegCol * pegSpacing) + (pegSpacing / 2);
             }
 
-            const ballRadius = width * 0.027;
+            const ballRadius = width * PHYSICS_CONFIG.BALL_RADIUS_RATIO;
             const ball = Bodies.circle(startX, -20, ballRadius, {
-                restitution: isFireBall ? 0.0 : 0.75, // Less bouncy (heavier feel)
-                friction: isFireBall ? 0 : 0.005,
-                frictionAir: isFireBall ? 0.07 : 0.01, // Lower resistance for better glide
-                density: 1.5, // Heavier mass
+                restitution: isFireBall ? 0.0 : PHYSICS_CONFIG.BALL_RESTITUTION,
+                friction: isFireBall ? 0 : PHYSICS_CONFIG.BALL_FRICTION,
+                frictionAir: isFireBall ? 0.07 : PHYSICS_CONFIG.BALL_FRICTION_AIR,
+                density: PHYSICS_CONFIG.BALL_DENSITY,
                 render: isFireBall ? {
                     fillStyle: '#ff4d00',
                     strokeStyle: '#ffae00',
@@ -90,9 +113,9 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                 isSensor: isFireBall // FIREBALL IGNORES ALL COLLISIONS (But triggers events)
             });
 
-            // Random slight x velocity (chaos) ONLY IF NOT FIREBALL
+            // Random slight x velocity (chaos) ONLY IF NOT FIREBALL — prevents straight fall
             if (!isFireBall) {
-                Matter.Body.setVelocity(ball, { x: (Math.random() - 0.5) * 3, y: 0 });
+                Matter.Body.setVelocity(ball, { x: (Math.random() - 0.5) * PHYSICS_CONFIG.BALL_INITIAL_X_CHAOS, y: 0 });
             } else {
                 Matter.Body.setVelocity(ball, { x: 0, y: 5 }); // Push it down
             }
@@ -115,7 +138,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
 
             // Setup Matter JS
             const engine = Engine.create();
-            engine.world.gravity.y = 1.2;
+            engine.world.gravity.y = PHYSICS_CONFIG.GRAVITY_Y;
             engineRef.current = engine;
 
             const render = Render.create({
@@ -134,8 +157,8 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
             // Walls (Edges of the screen)
             const wallThick = 60;
             const walls = [
-                Bodies.rectangle(-wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-left', friction: 0, restitution: 1.3 }),
-                Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-right', friction: 0, restitution: 1.3 }),
+                Bodies.rectangle(-wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-left', friction: 0, restitution: PHYSICS_CONFIG.WALL_RESTITUTION }),
+                Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-right', friction: 0, restitution: PHYSICS_CONFIG.WALL_RESTITUTION }),
                 Bodies.rectangle(width / 2, height + 25, width, 50, { isStatic: true, label: 'floor' })
             ];
             Composite.add(engine.world, walls);
@@ -149,23 +172,23 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
 
 
             // Pegs (Aligned Grid)
-            // Dynamic Peg Radius (Baseline 7px -> larger for impact)
-            const pegRadius = width * 0.021;
-            const pegRadiusSmall = width * 0.013; // Smaller for "Odd Columns" (Interleaved)
-            // Rows: Adjust count for density. 
-            // 16 rows makes it denser and harder.
-            const rows = 14;
-            const startY = 25; // Closer to top (Glued to divider)
-            const endY = height - 100; // Stop above the funnels
+            const pegRadius = width * PHYSICS_CONFIG.PEG_RADIUS_RATIO;
+            const pegRadiusSmall = width * PHYSICS_CONFIG.PEG_RADIUS_SMALL_RATIO;
+
+            // DYNAMIC ROWS — scale with screen height so vertical gap stays consistent across devices.
+            // Target gap = ball diameter × PEG_ROW_GAP_RATIO. Clamped between MIN/MAX.
+            const startY = 25;
+            const endY = height - 100;
+            const ballDiameter = width * PHYSICS_CONFIG.BALL_RADIUS_RATIO * 2;
+            const targetGapY = ballDiameter * PHYSICS_CONFIG.PEG_ROW_GAP_RATIO;
+            const computedRows = Math.floor((endY - startY) / targetGapY) + 1;
+            const rows = Math.max(PHYSICS_CONFIG.PEG_ROWS_MIN, Math.min(PHYSICS_CONFIG.PEG_ROWS_MAX, computedRows));
             const gapY = (endY - startY) / (rows - 1);
 
             // Unit Width
             const TOTAL_BINS = 5;
             const binW = width / TOTAL_BINS;
-
-            // PEG DENSITY (Decoupled from Bins)
-            // We want 7 columns of pegs to keep it "tight"
-            const PEG_COLS = 7;
+            const PEG_COLS = PHYSICS_CONFIG.PEG_COLS;
             const pegSpacing = width / PEG_COLS;
 
             for (let r = 0; r < rows; r++) {
@@ -188,7 +211,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                                     yScale: (pegRadius * 2) / 64
                                 }
                             },
-                            restitution: 0.9,
+                            restitution: PHYSICS_CONFIG.PEG_RESTITUTION_LARGE,
                             label: 'peg'
                         });
                         Composite.add(engine.world, peg);
@@ -207,7 +230,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                                     yScale: (pegRadiusSmall * 2) / 64
                                 }
                             },
-                            restitution: 1.5,
+                            restitution: PHYSICS_CONFIG.PEG_RESTITUTION_SMALL,
                             label: 'peg'
                         });
                         Composite.add(engine.world, peg);
@@ -327,13 +350,10 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                     const isFunnel = bodyA.label.includes('funnel') || bodyB.label.includes('funnel');
                     if (isFunnel) return;
 
-                    // ACTIVE BUMPER LOGIC
+                    // ACTIVE BUMPER LOGIC — kick along the normal for "relevant" direction change
                     if (ball && peg) {
-                        // Calculate vector from peg to ball
                         const normal = Vector.normalise(Vector.sub(ball.position, peg.position));
-                        // Apply active force (Kick)
-                        // Adjust magnitude to taste. 0.05 is significant for this size.
-                        const force = Vector.mult(normal, 0.05);
+                        const force = Vector.mult(normal, PHYSICS_CONFIG.PEG_ACTIVE_FORCE);
                         Body.applyForce(ball, ball.position, force);
 
                         // --- FEEDBACK SECTION ---
@@ -361,11 +381,9 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                         const hitRight = (bodyA.label === 'wall-right' || bodyB.label === 'wall-right');
 
                         if (hitLeft) {
-                            // Kick RIGHT
-                            Body.applyForce(ball, ball.position, { x: 0.15, y: -0.05 }); // Slight lift too
+                            Body.applyForce(ball, ball.position, { x: PHYSICS_CONFIG.WALL_KICK_X, y: PHYSICS_CONFIG.WALL_KICK_Y });
                         } else if (hitRight) {
-                            // Kick LEFT
-                            Body.applyForce(ball, ball.position, { x: -0.15, y: -0.05 }); // Slight lift too
+                            Body.applyForce(ball, ball.position, { x: -PHYSICS_CONFIG.WALL_KICK_X, y: PHYSICS_CONFIG.WALL_KICK_Y });
                         }
                     }
 

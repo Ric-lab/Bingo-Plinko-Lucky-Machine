@@ -1,17 +1,16 @@
 import React from 'react';
 
-// Theme Configuration
 const COLS = ['L', 'U', 'C', 'K', 'Y'];
 const THEMES = [
-    // B - Rose
+    // L - Rose
     { header: '#f43f5e', text: '#e11d48', bg: '#fff1f2', border: '#fecdd3' },
-    // I - Sky
+    // U - Sky
     { header: '#0ea5e9', text: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },
-    // N - Emerald
+    // C - Emerald
     { header: '#10b981', text: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
-    // G - Amber
+    // K - Amber
     { header: '#f59e0b', text: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-    // O - Violet
+    // Y - Violet
     { header: '#8b5cf6', text: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
 ];
 
@@ -108,8 +107,6 @@ export default function BingoCard({ card, level, getImage }) {
                                         className="absolute inset-0 w-full h-full object-fill pointer-events-none drop-shadow-sm"
                                     />
                                 )}
-
-                                {/* MARKED STATE: Red Circle Removed (Replaced by Tile Style above) */}
 
                                 {/* Number Content */}
                                 {!isFree && (

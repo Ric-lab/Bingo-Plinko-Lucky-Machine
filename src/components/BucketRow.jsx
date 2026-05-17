@@ -1,15 +1,7 @@
-import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
+import { motion } from 'framer-motion';
 
 const COLS = ['L', 'U', 'C', 'K', 'Y'];
-
-const PIPE_COLORS = [
-    { base: 'bg-rose-500', rim: 'bg-rose-600', hue: 'rose' },
-    { base: 'bg-sky-500', rim: 'bg-sky-600', hue: 'sky' },
-    { base: 'bg-emerald-500', rim: 'bg-emerald-600', hue: 'emerald' },
-    { base: 'bg-amber-500', rim: 'bg-amber-600', hue: 'amber' },
-    { base: 'bg-violet-500', rim: 'bg-violet-600', hue: 'violet' }
-];
 
 // Rolling Slot Component
 const RollingSlot = ({ target, delay, onFinish }) => {
@@ -173,20 +165,13 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
     };
 
     return (
-        // Back to Standard Full Width
         <div className="absolute bottom-0 left-0 right-0 h-[70px] flex items-end justify-between w-full px-0 z-20 pointer-events-auto">
             {slotsResult.map((num, i) => {
                 const isUseful = checkIsUseful(num);
-                const theme = PIPE_COLORS[i];
-                // Only show GOLD if the slot is revealed (or phase is DROP/RESOLVE)
-                // OR if FIREBALL is active (all/target glow)
                 const isFireTarget = fireBallActive;
 
-                // VISUAL RULE: Gold if Useful AND Revealed, OR if Magic Active (All Pipes)
+                // Gold = number is useful AND revealed, or Magic mode (all pipes gold).
                 const showGold = (isUseful && (phase === 'DROP' || phase === 'RESOLVE' || (phase === 'SPINNING' && revealed[i]))) || magicActive;
-                // IMPORTANT: We do NOT override the color for Fire anymore. We just add an effect.
-
-                // Determine Base Style based solely on Gold state or Normal state
                 let rimClasses = '';
                 let bodyClasses = '';
 
@@ -210,8 +195,7 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
                         }}>
 
 
-                        {/* FIREBALL OVERLAY EFFECT (Realistic Particles) */}
-                        {/* FIREBALL OVERLAY EFFECT (Distributed Vector Style) */}
+                        {/* Fireball overlay: distributed vector flames */}
                         {isFireTarget && <DistributedFire />}
 
                         {/* Pipe Rim (Top) - Solid & Opaque */}
@@ -229,8 +213,6 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
                  ${bodyClasses}
                  ${(phase === 'DROP' || isFireTarget) ? 'group-hover:scale-110 active:scale-95 cursor-pointer' : 'cursor-default'}
              `}>
-                            {/* Texture/Highlight REMOVED */}
-
                             {phase === 'SPINNING' ? (
                                 <RollingSlot
                                     key={`rolling-${i}-${num}`}

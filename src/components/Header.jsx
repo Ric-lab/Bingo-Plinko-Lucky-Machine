@@ -1,7 +1,7 @@
 import React from 'react';
-import { ShoppingCart, Gamepad2, Menu } from 'lucide-react';
+import { ShoppingCart, Menu } from 'lucide-react';
 
-export default function Header({ coins, level, onOpenShop, onOpenMenu, getImmutableImage }) {
+export default function Header({ coins, onOpenShop, onOpenMenu, getImmutableImage }) {
     return (
         <div className="w-full h-[50px] backdrop-blur-md bg-white/10 flex items-center justify-between px-4 z-30 flex-shrink-0 relative">
 

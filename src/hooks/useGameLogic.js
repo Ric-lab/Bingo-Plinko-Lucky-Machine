@@ -127,9 +127,7 @@ export function useGameLogic(gameMode = 'FINGO') {
     const [slotsResult, setSlotsResult] = useState([0, 0, 0, 0, 0]);
     const [isGameOver, setIsGameOver] = useState(false);
     const [winState, setWinState] = useState(false);
-    const [combo, setCombo] = useState(0);
     const [fireBallActive, setFireBallActive] = useState(false);
-    const [mercyTrack, setMercyTrack] = useState({});
     const [magicActive, setMagicActive] = useState(false);
 
     // PHASE: 'SPIN' | 'SPINNING' | 'DROP' | 'RESOLVE' | 'GAME_OVER' | 'VICTORY' | 'BONUS_WHEEL'
@@ -197,8 +195,6 @@ export function useGameLogic(gameMode = 'FINGO') {
         // Set Balls based on Mode
         setBalls(config.balls);
 
-        setMercyTrack({});
-        setCombo(0);
         setSlotsResult([0, 0, 0, 0, 0]);
         setFireBallActive(false);
         setMagicActive(false);
@@ -290,40 +286,6 @@ export function useGameLogic(gameMode = 'FINGO') {
             if (cell) setMagicActive(true);
         }
 
-        // Mercy Logic (Simplified for brevity, similar to before)
-        let mercyOverride = false;
-        let mercyTargetCol = -1;
-        let mercyTargetNum = -1;
-
-        if (balls <= 10 && !magicNumber) {
-            // ... Existing Mercy Logic ...
-            // Re-implementing simplified version to save space but keep logic:
-            // Find near misses (one away from win)
-            // MODE SPECIFIC MERCY?
-            // Spingo mercy: 1 away from 5?
-            // Bingo mercy: 1 away from Full?
-            // Fingo: 1 away from Line?
-
-            // For now, let's stick to the generic check (Fingo style) or just skip extensive mercy for custom modes to save complexity unless requested.
-            // But existing code had it. Let's keep it robust.
-            // The old mercy logic looked for lines/diagonals.
-
-            // TODO: Adapt mercy for new modes? 
-            // "MODO B (Bingo)": Blackout is hard. Mercy should probably help fill the board.
-            // "MODO C (Spingo)": Any 5. Mercy should help if 4 are marked.
-
-            // Given the complexity, and request "O restante das coisas deve permanecer sem mudanças", 
-            // I will reuse the generic "lines/diagonals" mercy for Fingo.
-            // For Bingo/Spingo, standard RNG might be enough or we could adapt.
-            // Let's stick to standard behavior for now to avoid over-engineering.
-            // IF Fingo -> Use line check for mercy.
-            if (gameMode === 'FINGO') {
-                // ... (Previous logic code block) ...
-                // To avoid huge file bloat, I'll trust standard RNG + magic items for now.
-                // User didn't explicitly ask for Mercy adaptation.
-            }
-        }
-
         // Determine Chosen Indices (Golden Buckets)
         let chosenIndices = [];
         if (availableCols.length < targetCount) targetCount = availableCols.length;
@@ -365,8 +327,6 @@ export function useGameLogic(gameMode = 'FINGO') {
         setTimeout(() => setPhase('DROP'), 2200);
     };
 
-    const completeSpin = () => setPhase('DROP');
-
     const dropBall = () => {
         if (phase !== 'DROP' || balls <= 0) return false;
         setPhase('RESOLVE');
@@ -396,7 +356,6 @@ export function useGameLogic(gameMode = 'FINGO') {
 
         if (hit) {
             setBingoCard(newCard);
-            setCombo(prev => prev + 1);
             earned = 5;
             setCoins(prev => prev + earned);
 
@@ -433,7 +392,6 @@ export function useGameLogic(gameMode = 'FINGO') {
                 }
             }
         } else {
-            setCombo(0);
             if (balls <= 0) {
                 if (!winState) {
                     setTimeout(() => {
@@ -450,7 +408,6 @@ export function useGameLogic(gameMode = 'FINGO') {
         return {
             hit,
             earned,
-            combo: hit ? combo + 1 : 0,
             hasBingo: winState || checkResult,
             isDefeat
         };
@@ -475,10 +432,11 @@ export function useGameLogic(gameMode = 'FINGO') {
         return false;
     };
 
+    // DEBUG: jump straight to the Lucky Spin (roleta) screen.
+    // Only sets phase — touching `levels` would re-trigger initLevel (via useEffect on levels)
+    // and reset phase back to 'SPIN' before the roleta renders.
     const forceWin = () => {
-        setWinState(true);
-        setIsGameOver(true);
-        setPhase('GAME_OVER');
+        setPhase('BONUS_WHEEL');
     };
 
     return {
@@ -498,7 +456,6 @@ export function useGameLogic(gameMode = 'FINGO') {
         actions: {
             initLevel,
             startSpin,
-            completeSpin,
             dropBall,
             resolveTurn,
             buyItem,

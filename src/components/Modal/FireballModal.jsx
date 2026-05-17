@@ -22,12 +22,7 @@ export default function FireballModal({
     const handleConfirm = () => {
         playClick?.();
         if (coins >= COST) {
-            if (buyItem('fireball', COST)) {
-                // Success handled by hook/App, but we can show message here if needed
-                // App.jsx commented out the message, so we'll stick to that or Add it back if requested.
-                // The original code had: // showMessage('success', 'Fireball Ready!', 'Next drop will be flaming hot!');
-                onClose();
-            }
+            if (buyItem('fireball', COST)) onClose();
         } else {
             showMessage('error', 'Oops!', 'Not enough coins for Fireball!');
         }

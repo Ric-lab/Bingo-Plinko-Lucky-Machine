@@ -76,7 +76,6 @@ export default function MagicNumberModal({
         <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col relative animate-scale-up border-2 border-indigo-200">
 
-                {/* Close Button matching ConfirmationModal exactly */}
                 <button
                     onClick={() => { playClick?.(); onClose(); }}
                     className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-20"
@@ -85,11 +84,9 @@ export default function MagicNumberModal({
                 </button>
 
                 <div className="p-6 pb-0 flex flex-col items-center space-y-2">
-                    {/* Header/Title Area to match style */}
                     <div className="p-4 rounded-full bg-indigo-50 text-indigo-500 shadow-sm mb-1">
                         <Wand2 size={40} />
                     </div>
-
                 </div>
 
                 {/* Grid - Adjusted to fit within the container flow */}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingCart, Star, Crown, Coins, Palette, CheckCircle2, Lock, Ban, Trophy } from 'lucide-react';
+import { X, ShoppingCart, Star, Crown, Coins, Palette, CheckCircle2, Lock, Trophy } from 'lucide-react';
 
 export default function ShopModal({
   isOpen,
@@ -16,7 +16,6 @@ export default function ShopModal({
 
   const [activeTab, setActiveTab] = useState('coins'); // 'coins' | 'skins'
 
-  // Real Money Offers
   // Real Money Offers
   const coinOffers = [
     {
@@ -96,17 +95,13 @@ export default function ShopModal({
 
   const handleBuyCoins = (offer) => {
     playClick?.();
-    // Simulation
-    console.log("Comprando Coins:", offer.title);
-    // Positive Amount = Cheat/Simulate Add
-    // In real app, this waits for Payment Gateway
+    // Simulation - dev mode credits coins directly. Replace with real payment integration before launch.
     if (buyItem) buyItem('coins', -offer.coins);
   };
 
   const handleBuyNoAds = () => {
     playClick?.();
-    console.log("Comprando No Ads");
-    // Trigger No Ads Logic
+    // TODO: wire up real No Ads purchase flow when payment integration is added.
   };
 
   const handleSkinAction = (skin) => {
@@ -114,17 +109,10 @@ export default function ShopModal({
     const isOwned = ownedSkins.includes(skin.id);
 
     if (isOwned) {
-      // Equip
       setCurrentSkin(skin.id);
-    } else {
-      // Buy
-      if (coins >= skin.price) {
-        if (buyItem('coins', skin.price)) { // Deduct coins
-          unlockSkin(skin.id);
-        }
-      } else {
-        // Shake or feedback for insufficient funds
-        console.log("Moedas insuficientes");
+    } else if (coins >= skin.price) {
+      if (buyItem('coins', skin.price)) {
+        unlockSkin(skin.id);
       }
     }
   };

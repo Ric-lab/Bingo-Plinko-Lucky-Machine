@@ -56,8 +56,8 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
                 <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 animate-fade-in" />
 
                 <div className="flex flex-col items-center animate-pulse px-4 text-center">
-                    <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-red-800 drop-shadow-[0_2px_0_rgba(139,0,0,1)] stroke-white tracking-widest uppercase flex items-center justify-center gap-2">
-                        <span className="text-4xl"></span> TRY AGAIN <span className="text-4xl"></span>
+                    <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-red-800 drop-shadow-[0_2px_0_rgba(139,0,0,1)] stroke-white tracking-widest uppercase">
+                        TRY AGAIN
                     </h1>
 
                     {message && (
