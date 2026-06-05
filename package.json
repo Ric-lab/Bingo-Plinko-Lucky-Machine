@@ -1,7 +1,7 @@
 {
-  "name": "temp_setup",
+  "name": "bingo-plinko-lucky-machine",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,6 +15,7 @@
     "@capacitor/android": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
+    "@capacitor/preferences": "^8.0.1",
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.561.0",

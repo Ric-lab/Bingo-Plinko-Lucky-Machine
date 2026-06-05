@@ -241,27 +241,6 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
             // Physical Separators & Sensors
             // These must MATCH THE VISUAL BUCKETS (5 Cols)
 
-            // VISUAL DEBUG MARKERS (DROP POINTS)
-            // Show where the balls will drop for B-I-N-G-O (Inputs 0-4)
-            for (let i = 0; i < 5; i++) {
-                const targetPegCol = i + 1; // Map 0..4 -> 1..5
-                const markerX = (targetPegCol * pegSpacing) + (pegSpacing / 2);
-                const markerY = 10; // Very top
-
-                const marker = Bodies.circle(markerX, markerY, 5, {
-                    isStatic: true,
-                    isSensor: true, // Ghost (no collision)
-                    label: `drop-marker-${i}`,
-                    render: {
-                        fillStyle: '#00ff00', // Bright Green
-                        opacity: 0.8
-                    }
-                });
-                Composite.add(engine.world, marker);
-            }
-
-            const bucketHeight = 60;
-
             for (let i = 0; i < TOTAL_BINS; i++) {
                 // i = 0..4
                 const x = i * binW; // Left edge of this bin
@@ -272,10 +251,8 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                 // But the loop is 0..4 (5 cols).
                 // We can add the Left funnel on i=0. The Right funnel triggers on i=4 (at x+binW).
 
-                const funnelWidth = binW * 0.5; // Dynamic width (50% of bin width)
                 const funnelHeight = 90; // Normalized height
 
-                // Standard VISIBLE Funnel (Internal) - DEBUGGING POSITION
                 const internalOptions = {
                     isStatic: true,
                     friction: 0,
@@ -583,9 +560,6 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                     ctx.fill();
                 }
             });
-
-            // DEBUG: Log all bodies to verify existence
-            // console.log("PHYSICS WORLD CREATED. BODIES:", Composite.allBodies(engine.world).map(b => b.label));
 
             Runner.run(Runner.create(), engine);
             Render.run(render);

@@ -1,7 +1,7 @@
 import React from 'react';
-import { X, HelpCircle, Music, Volume2, Smartphone } from 'lucide-react';
+import { X, HelpCircle, Music, Volume2, Smartphone, Home } from 'lucide-react';
 
-export default function SideMenu({ isOpen, onClose, settings, onUpdateSettings }) {
+export default function SideMenu({ isOpen, onClose, onGoHome, settings, onUpdateSettings }) {
 
     const toggleSetting = (key) => {
         onUpdateSettings(prev => {
@@ -77,6 +77,7 @@ export default function SideMenu({ isOpen, onClose, settings, onUpdateSettings }
 
                     {/* Navigation */}
                     <nav className="flex flex-col gap-1 px-2">
+                        <MenuItem icon={<Home size={20} />} label="Voltar ao Início" onClick={() => { onClose(); onGoHome?.(); }} />
                         <MenuItem icon={<HelpCircle size={20} />} label="Help" onClick={onClose} />
                     </nav>
                 </div>

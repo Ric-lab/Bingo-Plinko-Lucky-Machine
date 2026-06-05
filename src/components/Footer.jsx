@@ -1,72 +1,72 @@
 import React from 'react';
 
-export default function Footer({ phase, onSpin, onPowerUp, coins, balls, getImage }) {
-    const isSpinning = phase === 'SPIN';
-    const canAffordFireball = coins >= 250;
-    const canAffordMagic = coins >= 500;
+export default function Footer({ phase, onSpin, onPowerUp, balls, getImage }) {
+    const busy = phase === 'RESOLVE' || phase === 'GAME_OVER';
+
+    // spin.png is 720x256 (ratio ~2.8:1). At flex-1 width we let it define its own height
+    // via padding-top trick so it never distorts.
+    // Side buttons are square 224x224 originals — we display them at 72x72.
 
     return (
         <div
-            className="w-full h-[80px] border-t border-gray-200 flex items-center justify-between px-4 pt-2 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex-shrink-0"
+            className="w-full flex items-center px-2 gap-3 z-30 flex-shrink-0"
             style={{
+                height: 96,
                 backgroundImage: `url(${getImage('footerbg.png')})`,
                 backgroundSize: '100% 100%',
                 backgroundPosition: 'center'
             }}
         >
 
-            {/* Fireball */}
+            {/* Fireball — 72×72 square */}
             <button
                 onClick={() => onPowerUp('fireball')}
-                className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 active:mt-1 transition-all disabled:opacity-50 overflow-hidden p-1
-                ${canAffordFireball
-                        ? 'hover:brightness-110'
-                        : 'bg-gray-700 grayscale'}
-                `}
-                disabled={phase === 'RESOLVE' || phase === 'GAME_OVER'}
+                className="flex-shrink-0 transition-all duration-100 active:scale-90 hover:brightness-110"
+                style={{ width: 72, height: 72 }}
+                disabled={busy}
             >
                 <img
                     src={getImage('fireball.png')}
                     alt="Fireball"
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain drop-shadow-lg"
                 />
             </button>
 
-            {/* SPIN BUTTON (Pill) */}
+            {/* SPIN — flex-1, height drives from image ratio (720x256 ≈ 2.8:1).
+                We clamp the height so it stays proportional inside the 96px footer. */}
             <button
                 onClick={onSpin}
                 disabled={phase !== 'SPIN'}
-                className={`
-          flex-1 mx-4 h-16 rounded-full flex items-center justify-center text-2xl font-black tracking-widest shadow-xl transition-all active:scale-95 active:mt-1 overflow-hidden relative
-          ${phase === 'SPIN'
-                        ? 'text-white hover:brightness-110'
-                        : 'text-gray-500 cursor-not-allowed grayscale'}
-        `}
+                className={`flex-1 relative transition-all duration-100 active:scale-[0.97]
+                    ${phase === 'SPIN' ? 'hover:brightness-110' : 'cursor-not-allowed'}`}
+                style={{ height: 72 }}
             >
+                {/* Background pill image — fills button, object-fill OK because
+                    the button's aspect ratio is intentionally made to match ~2.8:1 */}
                 <img
                     src={getImage('spin.png')}
                     alt="Spin"
-                    className="absolute inset-0 w-full h-full object-cover z-0"
+                    className="absolute inset-0 w-full h-full object-fill"
+                    style={{ opacity: phase !== 'SPIN' ? 0.5 : 1 }}
                 />
-                <span className="relative z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                    {phase === 'SPIN' ? balls : phase === 'DROP' ? 'DROP !' : 'WAIT'}
+                <span className="relative z-10 w-full h-full flex items-center justify-center
+                    text-white font-black text-xl tracking-widest
+                    drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                    {phase === 'SPIN' ? balls : phase === 'DROP' ? 'DROP!' : 'WAIT'}
                 </span>
             </button>
 
-            {/* Magic (Asset) */}
+            {/* Magic Number — 72×72 square */}
             <button
                 onClick={() => onPowerUp('magic')}
-                className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 active:mt-1 transition-all disabled:opacity-50 overflow-hidden p-1.5 mb-0.5
-                ${canAffordMagic
-                        ? 'hover:brightness-110'
-                        : 'bg-gray-700 grayscale'}
-                `}
-                disabled={phase === 'RESOLVE' || phase === 'GAME_OVER'}
+                className="flex-shrink-0 transition-all duration-100 active:scale-90 hover:brightness-110"
+                style={{ width: 72, height: 72 }}
+                disabled={busy}
             >
                 <img
                     src={getImage('magicnumber.png')}
                     alt="Magic Number"
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain drop-shadow-lg"
                 />
             </button>
 

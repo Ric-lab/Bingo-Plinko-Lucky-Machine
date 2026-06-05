@@ -15,7 +15,7 @@ export default {
         'text-dark': '#3e2723',
       },
       fontFamily: {
-        'sans': ['"Nunito"', 'sans-serif'],
+        'sans': ['"Fredoka One"', 'cursive', 'sans-serif'],
       }
     },
   },

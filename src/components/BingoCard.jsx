@@ -17,17 +17,8 @@ const THEMES = [
 export default function BingoCard({ card, level, getImage }) {
     if (!card || card.length === 0) return <div className="p-4 text-center">Loading...</div>;
 
-    const currentLevel = level || 1;
-    let balloonImage = 'balloongreen.png'; // Default/Odd
-
-    if (currentLevel % 5 === 0) {
-        balloonImage = 'balloonred.png';
-    } else if (currentLevel % 2 === 0) {
-        balloonImage = 'balloonyellow.png';
-    }
-
     return (
-        <div className="w-full relative select-none flex flex-col items-center font-['Nunito']">
+        <div className="w-full relative select-none flex flex-col items-center font-sans">
             {/* Container for the Grid */}
             <div
                 className="w-full max-w-[500px] p-1 shadow-2xl flex flex-col items-center rounded-xl"
@@ -37,24 +28,6 @@ export default function BingoCard({ card, level, getImage }) {
                     backgroundRepeat: 'no-repeat'
                 }}
             >
-
-                {/* Level Detail (Moved Inside) */}
-                <div className="w-full flex justify-center mt-[3px] mb-1">
-                    <div
-                        className="flex items-center justify-center"
-                        style={{
-                            backgroundImage: `url(${getImage(balloonImage)})`,
-                            backgroundSize: '100% 100%',
-                            backgroundRepeat: 'no-repeat',
-                            width: '90px',
-                            height: '24px'
-                        }}
-                    >
-                        <span className="text-[12px] sm:text-xs font-bold text-white uppercase tracking-[0.2em] leading-none drop-shadow-sm pb-[1px]">
-                            CARD {level || 1}
-                        </span>
-                    </div>
-                </div>
 
                 {/* HEADERS */}
                 <div className="grid grid-cols-5 gap-0 mb-0 text-center w-full">

@@ -9,7 +9,8 @@ export default function FireballModal({
     coins,
     buyItem,
     showMessage,
-    playClick
+    playClick,
+    onOpenShop
 }) {
     const [showReward, setShowReward] = useState(false);
     const COST = 250;
@@ -24,7 +25,8 @@ export default function FireballModal({
         if (coins >= COST) {
             if (buyItem('fireball', COST)) onClose();
         } else {
-            showMessage('error', 'Oops!', 'Not enough coins for Fireball!');
+            onClose();
+            if (onOpenShop) onOpenShop();
         }
     };
 

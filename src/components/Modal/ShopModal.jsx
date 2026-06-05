@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingCart, Star, Crown, Coins, Palette, CheckCircle2, Lock, Trophy } from 'lucide-react';
 
+// Flip to true once real Google Play Billing (or equivalent) is wired up.
+// While false, real-money offers (coin packs, No Ads) are hidden so the build
+// is publish-safe. Skins remain available — they use in-game currency.
+const IAP_ENABLED = true;
+
 export default function ShopModal({
   isOpen,
   onClose,
@@ -11,10 +16,18 @@ export default function ShopModal({
   currentSkin,
   setCurrentSkin,
   ownedSkins,
-  unlockSkin
+  unlockSkin,
+  initialTab
 }) {
 
-  const [activeTab, setActiveTab] = useState('coins'); // 'coins' | 'skins'
+  const [activeTab, setActiveTab] = useState(IAP_ENABLED ? 'coins' : 'skins'); // 'coins' | 'skins'
+
+  // Sync tab when modal opens with a specific initialTab
+  React.useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   // Real Money Offers
   const coinOffers = [
@@ -162,6 +175,7 @@ export default function ShopModal({
             </div>
 
             {/* HIGH PRIORITY: Fixed No Ads Offer - Premium Card Design */}
+            {IAP_ENABLED && (
             <div className="p-5 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 shadow-lg relative overflow-hidden flex-shrink-0 z-0">
               {/* Decorative Background Elements */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
@@ -200,12 +214,14 @@ export default function ShopModal({
                   onClick={handleBuyNoAds}
                   className="flex flex-col items-center justify-center bg-gradient-to-b from-yellow-300 to-yellow-500 hover:from-yellow-200 hover:to-yellow-400 text-yellow-950 font-black py-3 px-5 rounded-2xl shadow-xl active:scale-95 transition-all text-xl border-b-4 border-yellow-700 active:border-b-0 active:translate-y-1 min-w-[100px]"
                 >
-                  <span>R$ 14,99</span>
+                  <span>R$ 19,99</span>
                 </button>
               </div>
             </div>
+            )}
 
             {/* Navigation Tabs */}
+            {IAP_ENABLED && (
             <div className="flex p-2 bg-white border-b border-gray-100 gap-2 flex-shrink-0">
               <TabButton
                 isActive={activeTab === 'coins'}
@@ -222,6 +238,7 @@ export default function ShopModal({
                 color="bg-purple-100 text-purple-700"
               />
             </div>
+            )}
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
@@ -259,6 +276,29 @@ export default function ShopModal({
                       </button>
                     </div>
                   ))}
+
+                  {/* No Ads Only — price anchor for the BEST OFFER banner */}
+                  <div className="relative flex items-center justify-between p-3 rounded-2xl shadow-lg border border-white/10 overflow-hidden group bg-gradient-to-br from-gray-500 to-slate-700">
+                    {/* Decorative Background */}
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+
+                    <div className="flex items-center gap-3 relative z-10 overflow-hidden">
+                      <div className="relative p-2.5 rounded-xl bg-white/20 backdrop-blur-sm shadow-inner flex-shrink-0">
+                        <img src="/Images/Immutable/NoAds.png" alt="No Ads" className="w-6 h-6 object-contain" />
+                      </div>
+                      <div className="text-white min-w-0">
+                        <h4 className="font-black text-lg italic tracking-tight drop-shadow-sm whitespace-nowrap">NO ADS</h4>
+                        <span className="text-gray-300 text-xs font-medium">Jogue sem anúncios</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleBuyNoAds}
+                      className="relative z-10 bg-white text-gray-900 font-black py-2 px-3 rounded-lg shadow-xl active:scale-95 transition-all text-sm border-b-4 border-gray-300 active:border-b-0 active:translate-y-1 whitespace-nowrap"
+                    >
+                      R$ 19,99
+                    </button>
+                  </div>
                 </motion.div>
               )}
 

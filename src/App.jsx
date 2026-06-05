@@ -8,6 +8,9 @@ import Footer from './components/Footer';
 import { useGameLogic } from './hooks/useGameLogic';
 import { useTheme } from './hooks/useTheme';
 import { useSound } from './hooks/useSound';
+import { loadJSON, saveJSON } from './utils/storage';
+
+const AUDIO_STORAGE_KEY = 'bplm.audio.v1';
 
 import MagicNumberModal from './components/Modal/MagicNumberModal';
 import MessageModal from './components/Modal/MessageModal';
@@ -23,13 +26,31 @@ export default function App() {
     sfx: 1,
     vibration: 1
   });
+  const audioHydratedRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadJSON(AUDIO_STORAGE_KEY).then(saved => {
+      if (cancelled) return;
+      if (saved) {
+        setAudioSettings(prev => ({ ...prev, ...saved }));
+      }
+      audioHydratedRef.current = true;
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!audioHydratedRef.current) return;
+    saveJSON(AUDIO_STORAGE_KEY, audioSettings);
+  }, [audioSettings]);
 
   const [gameStarted, setGameStarted] = useState(false);
   const [gameMode, setGameMode] = useState('FINGO');
 
   const {
     state: { coins, balls, level, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive, luckySpinReward },
-    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, completeLuckySpin, forceWin }
+    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, completeLuckySpin }
   } = useGameLogic(gameMode);
 
   const {
@@ -119,7 +140,14 @@ export default function App() {
   const [showMagicModal, setShowMagicModal] = useState(false);
   const [showFireballConfirm, setShowFireballConfirm] = useState(false);
   const [showShopModal, setShowShopModal] = useState(false);
+  const [shopTab, setShopTab] = useState('coins');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const openShop = (tab = 'coins') => {
+    playClick();
+    setShopTab(tab);
+    setShowShopModal(true);
+  };
 
   // Helper to show modal
   const showMessage = (type, title, message, autoCloseDuration = 0) => {
@@ -253,21 +281,22 @@ export default function App() {
       )}
 
       <Header
+        level={level}
         coins={coins}
-        onOpenShop={() => {
-          playClick();
-          setShowShopModal(true);
-        }}
+        onOpenShop={() => openShop('coins')}
+        onOpenThemes={() => openShop('skins')}
         onOpenMenu={() => {
           playClick();
           setIsMenuOpen(true);
         }}
+        getImage={getImage}
         getImmutableImage={getImmutableImage}
       />
 
       <SideMenu
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
+        onGoHome={() => setGameStarted(false)}
         settings={audioSettings}
         onUpdateSettings={setAudioSettings}
       />
@@ -329,15 +358,6 @@ export default function App() {
         />
       </div>
 
-      {/* DEBUG: jump to Lucky Spin (roleta). REMOVE BEFORE PRODUCTION. */}
-      <button
-        onClick={() => forceWin()}
-        className="fixed top-20 left-4 bg-red-600/80 text-white z-50 p-2 text-xs rounded-md shadow-lg"
-        id="debug-win-btn"
-      >
-        GO TO LUCKY SPIN
-      </button>
-
       <MagicNumberModal
         isOpen={showMagicModal}
         onClose={() => setShowMagicModal(false)}
@@ -346,6 +366,7 @@ export default function App() {
         showMessage={showMessage}
         bingoCard={bingoCard}
         playClick={playClick}
+        onOpenShop={() => openShop('coins')}
       />
 
       <FireballModal
@@ -355,6 +376,7 @@ export default function App() {
         buyItem={buyItem}
         showMessage={showMessage}
         playClick={playClick}
+        onOpenShop={() => openShop('coins')}
       />
 
       <MessageModal
@@ -397,6 +419,7 @@ export default function App() {
         setCurrentSkin={setCurrentSkin}
         ownedSkins={ownedSkins}
         unlockSkin={unlockSkin}
+        initialTab={shopTab}
       />
       {/* Lucky Wheel Bonus Phase */}
       {phase === 'BONUS_WHEEL' && (

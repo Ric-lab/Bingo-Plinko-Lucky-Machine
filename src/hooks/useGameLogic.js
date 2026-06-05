@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { calculateProbabilities } from '../utils/mathUtils';
+import { loadJSON, saveJSON } from '../utils/storage';
+
+const STORAGE_KEY = 'bplm.gameLogic.v1';
 
 const COLS = ['B', 'I', 'N', 'G', 'O'];
 
@@ -110,14 +113,36 @@ function getUniqueRandoms(min, max, count) {
 
 export function useGameLogic(gameMode = 'FINGO') {
     // --- STATE ---
-    const [coins, setCoins] = useState(10000);
+    const [coins, setCoins] = useState(1000);
 
     // Level Persistence: Object
     const [levels, setLevels] = useState({
-        'FINGO': 50,
+        'FINGO': 1,
         'BINGO': 1,
         'SPINGO': 1
     });
+
+    // Hydrate from device storage on first mount, then persist on changes.
+    const hydratedRef = useRef(false);
+    useEffect(() => {
+        let cancelled = false;
+        loadJSON(STORAGE_KEY).then(saved => {
+            if (cancelled) return;
+            if (saved) {
+                if (typeof saved.coins === 'number') setCoins(saved.coins);
+                if (saved.levels) {
+                    setLevels(prev => ({ ...prev, ...saved.levels }));
+                }
+            }
+            hydratedRef.current = true;
+        });
+        return () => { cancelled = true; };
+    }, []);
+
+    useEffect(() => {
+        if (!hydratedRef.current) return;
+        saveJSON(STORAGE_KEY, { coins, levels });
+    }, [coins, levels]);
 
     // Derived current level
     const currentLevel = levels[gameMode || 'FINGO'];
@@ -152,7 +177,6 @@ export function useGameLogic(gameMode = 'FINGO') {
 
         // Flatten to Grid
         let newCard = [];
-        const isSpingo = (gameMode === 'SPINGO');
 
         for (let r = 0; r < 5; r++) {
             for (let c = 0; c < 5; c++) {
@@ -432,13 +456,6 @@ export function useGameLogic(gameMode = 'FINGO') {
         return false;
     };
 
-    // DEBUG: jump straight to the Lucky Spin (roleta) screen.
-    // Only sets phase — touching `levels` would re-trigger initLevel (via useEffect on levels)
-    // and reset phase back to 'SPIN' before the roleta renders.
-    const forceWin = () => {
-        setPhase('BONUS_WHEEL');
-    };
-
     return {
         state: {
             coins,
@@ -461,8 +478,7 @@ export function useGameLogic(gameMode = 'FINGO') {
             buyItem,
             nextLevel,
             spinLuckySpin,
-            completeLuckySpin,
-            forceWin
+            completeLuckySpin
         }
     };
 }

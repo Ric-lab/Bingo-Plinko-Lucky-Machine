@@ -1,16 +1,47 @@
-# React + Vite
+# Bingo Plinko Lucky Machine
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Mobile casual game combining Bingo and Plinko mechanics. Built with React + Vite, physics by Matter.js, packaged for Android via Capacitor.
 
-Currently, two official plugins are available:
+## Game modes
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **FINGO** — line/diagonal bingo (5 in a row). 50 balls.
+- **BINGO** — full card blackout. 100 balls.
+- **SPINGO** — any 5 marked cells. 25 balls, no free center.
 
-## React Compiler
+Every 25 levels triggers a Lucky Spin bonus wheel.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Scripts
 
-## Expanding the ESLint configuration
+| Command | Action |
+| --- | --- |
+| `npm run dev` | Vite dev server (web preview) |
+| `npm run build` | Production web build into `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run lint` | ESLint |
+| `npm run build:android` | Build web + `cap sync android` |
+| `npm run open:android` | Open the Android project in Android Studio |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Project layout
+
+- `src/App.jsx` — root component, audio orchestration, home screen, game shell
+- `src/hooks/useGameLogic.js` — game state machine, win checks, rewards
+- `src/hooks/useTheme.js` — skin/asset resolution
+- `src/components/GameCanvas.jsx` — Matter.js physics + render loop
+- `src/components/Modal/` — Magic, Fireball, Shop, Game Over, Next Level, Lucky Spin
+- `public/Images/<skin>/` — themeable image assets (Standard, Ocean, …)
+- `public/Audio/<skin>/` — themeable sound assets
+- `public/Images/Immutable/`, `public/Audio/Immutable/` — assets shared across skins
+- `android/` — Capacitor Android shell
+
+## Android build
+
+```bash
+npm run build:android
+npm run open:android
+```
+
+Then in Android Studio: **Build → Generate Signed Bundle / APK** (requires a release keystore configured in `android/app/build.gradle`).
+
+## Publishing checklist
+
+See the issues tracked in the repo before each release.
