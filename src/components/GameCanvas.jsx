@@ -13,11 +13,11 @@ const COLORS = {
 // ============================================================================
 const PHYSICS_CONFIG = {
     // --- Ball ---
-    BALL_RADIUS_RATIO: 0.027,       // % of canvas width
-    BALL_RESTITUTION: 0.75,         // bounciness on collision (0-1)
+    BALL_RADIUS_RATIO: 0.03,       // % of canvas width
+    BALL_RESTITUTION: 0.59,         // bounciness on collision (0-1)
     BALL_FRICTION: 0.005,
     BALL_FRICTION_AIR: 0.01,
-    BALL_DENSITY: 1.5,              // heavier mass = more momentum
+    BALL_DENSITY: 2.0,              // heavier mass = more momentum
     BALL_INITIAL_X_CHAOS: 3,        // max abs horizontal velocity at drop (prevents straight fall)
 
     // --- Pegs ---
@@ -66,7 +66,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
     }, [onBallLanded, onPegHit]);
 
     useImperativeHandle(ref, () => ({
-        dropBall: (colIdx, isFireBall = false) => {
+        dropBall: (colIdx, isFireBall = false, level = 1, winStreak = 0, gameMode = 'FINGO') => {
             if (!engineRef.current || !renderRef.current) return;
 
             const width = renderRef.current.options.width;
@@ -110,12 +110,19 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                     }
                 },
                 label: isFireBall ? 'fireball' : 'player-ball',
-                isSensor: isFireBall // FIREBALL IGNORES ALL COLLISIONS (But triggers events)
+                isSensor: isFireBall, // FIREBALL IGNORES ALL COLLISIONS (But triggers events)
+                // Custom properties for logic
+                customLevel: level,
+                targetColIdx: colIdx,
+                customWinStreak: winStreak,
+                customGameMode: gameMode
             });
 
             // Random slight x velocity (chaos) ONLY IF NOT FIREBALL — prevents straight fall
             if (!isFireBall) {
-                Matter.Body.setVelocity(ball, { x: (Math.random() - 0.5) * PHYSICS_CONFIG.BALL_INITIAL_X_CHAOS, y: 0 });
+                // Drop Chaos increases with level
+                const chaosMultiplier = Math.min(2.5, 1 + (level / 100));
+                Matter.Body.setVelocity(ball, { x: (Math.random() - 0.5) * PHYSICS_CONFIG.BALL_INITIAL_X_CHAOS * chaosMultiplier, y: 0 });
             } else {
                 Matter.Body.setVelocity(ball, { x: 0, y: 5 }); // Push it down
             }
@@ -330,7 +337,31 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                     // ACTIVE BUMPER LOGIC — kick along the normal for "relevant" direction change
                     if (ball && peg) {
                         const normal = Vector.normalise(Vector.sub(ball.position, peg.position));
-                        const force = Vector.mult(normal, PHYSICS_CONFIG.PEG_ACTIVE_FORCE);
+                        let force = Vector.mult(normal, PHYSICS_CONFIG.PEG_ACTIVE_FORCE);
+
+                        // ANTI-VICTORY VECTOR (Near-Miss Illusion)
+                        // Ativo desde o nível 1. Força constante (não progressiva) para desviar inteligentemente a bola.
+                        if (ball.customLevel > 0 && ball.label !== 'fireball') {
+                            const width = renderRef.current.options.width;
+                            const binW = width / 5;
+                            const targetCenter = (ball.targetColIdx * binW) + (binW / 2);
+
+                            // If the ball is still somewhat above the target column, apply a subtle lateral push OUTWARDS
+                            if (Math.abs(ball.position.x - targetCenter) < binW) {
+                                const pushDir = ball.position.x > targetCenter ? 1 : -1;
+
+                                // Força base dependendo do modo
+                                let vectorForce = ball.customGameMode === 'SPINGO' ? 0.02 : 0.01;
+
+                                // Trapaça Descarada: Impede a 4ª vitória consecutiva
+                                if (ball.customWinStreak >= 3) {
+                                    vectorForce = ball.customGameMode === 'SPINGO' ? 0.06 : 0.03;
+                                }
+
+                                force.x += pushDir * vectorForce;
+                            }
+                        }
+
                         Body.applyForce(ball, ball.position, force);
 
                         // --- FEEDBACK SECTION ---

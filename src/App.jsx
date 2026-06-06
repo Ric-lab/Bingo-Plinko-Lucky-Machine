@@ -49,7 +49,7 @@ export default function App() {
   const [gameMode, setGameMode] = useState('FINGO');
 
   const {
-    state: { coins, balls, level, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive, luckySpinReward },
+    state: { coins, balls, level, winStreak, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive, luckySpinReward },
     actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, completeLuckySpin }
   } = useGameLogic(gameMode);
 
@@ -171,7 +171,7 @@ export default function App() {
     if (dropBall(colIndex)) {
       // Visual drop (ball)
       if (canvasRef.current) {
-        canvasRef.current.dropBall(colIndex, isFire);
+        canvasRef.current.dropBall(colIndex, fireBallActive, level, winStreak, gameMode);
       }
 
       // SFX for Fireball
@@ -241,11 +241,13 @@ export default function App() {
 
           {/* Game Mode Buttons */}
           <div className="relative z-10 flex flex-col gap-6 items-center mt-[40vh]">
+            
             {/* Bingo (New Mode) */}
             <button
               onClick={() => {
                 playClick();
                 setGameMode('BINGO');
+                initLevel();
                 setGameStarted(true);
               }}
               className="w-64 transition-transform hover:scale-105 active:scale-95"
@@ -258,6 +260,7 @@ export default function App() {
               onClick={() => {
                 playClick();
                 setGameMode('FINGO');
+                initLevel();
                 setGameStarted(true);
               }}
               className="w-64 transition-transform hover:scale-105 active:scale-95"
@@ -270,6 +273,7 @@ export default function App() {
               onClick={() => {
                 playClick();
                 setGameMode('SPINGO');
+                initLevel();
                 setGameStarted(true);
               }}
               className="w-64 transition-transform hover:scale-105 active:scale-95"
@@ -308,6 +312,7 @@ export default function App() {
             card={bingoCard}
             level={level}
             getImage={getImage}
+            getImmutableImage={getImmutableImage}
           />
         </div>
       </div>
@@ -321,6 +326,7 @@ export default function App() {
             onPegHit={playPeg}
             vibrationLevel={audioSettings.vibration}
             getImage={getImage}
+            getImmutableImage={getImmutableImage}
             key={currentSkin} // Force re-mount on skin change
           />
         </div>
@@ -355,6 +361,7 @@ export default function App() {
             else if (type === 'magic') setShowMagicModal(true);
           }}
           getImage={getImage}
+          getImmutableImage={getImmutableImage}
         />
       </div>
 

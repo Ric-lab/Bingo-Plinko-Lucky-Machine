@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { calculateProbabilities } from '../utils/mathUtils';
 import { loadJSON, saveJSON } from '../utils/storage';
 
-const STORAGE_KEY = 'bplm.gameLogic.v1';
+const STORAGE_KEY = 'bplm.gameLogic.v7';
 
 const COLS = ['B', 'I', 'N', 'G', 'O'];
 
@@ -113,14 +113,15 @@ function getUniqueRandoms(min, max, count) {
 
 export function useGameLogic(gameMode = 'FINGO') {
     // --- STATE ---
-    const [coins, setCoins] = useState(1000);
+    const [coins, setCoins] = useState(50000);
 
-    // Level Persistence: Object
     const [levels, setLevels] = useState({
         'FINGO': 1,
         'BINGO': 1,
         'SPINGO': 1
     });
+
+    const [winStreak, setWinStreak] = useState(0);
 
     // Hydrate from device storage on first mount, then persist on changes.
     const hydratedRef = useRef(false);
@@ -129,10 +130,13 @@ export function useGameLogic(gameMode = 'FINGO') {
         loadJSON(STORAGE_KEY).then(saved => {
             if (cancelled) return;
             if (saved) {
-                if (typeof saved.coins === 'number') setCoins(saved.coins);
+                if (typeof saved.coins === 'number') {
+                    setCoins(saved.coins < 50000 ? 50000 : saved.coins);
+                }
                 if (saved.levels) {
                     setLevels(prev => ({ ...prev, ...saved.levels }));
                 }
+                if (typeof saved.winStreak === 'number') setWinStreak(saved.winStreak);
             }
             hydratedRef.current = true;
         });
@@ -141,8 +145,8 @@ export function useGameLogic(gameMode = 'FINGO') {
 
     useEffect(() => {
         if (!hydratedRef.current) return;
-        saveJSON(STORAGE_KEY, { coins, levels });
-    }, [coins, levels]);
+        saveJSON(STORAGE_KEY, { coins, levels, winStreak });
+    }, [coins, levels, winStreak]);
 
     // Derived current level
     const currentLevel = levels[gameMode || 'FINGO'];
@@ -172,7 +176,7 @@ export function useGameLogic(gameMode = 'FINGO') {
         let colsData = [[], [], [], [], []];
         for (let c = 0; c < 5; c++) {
             const range = ranges[COLS[c]];
-            colsData[c] = getUniqueRandoms(range[0], range[1], 5);
+            colsData[c] = getUniqueRandoms(range[0], range[1], 5).sort((a, b) => a - b);
         }
 
         // Flatten to Grid
@@ -284,6 +288,41 @@ export function useGameLogic(gameMode = 'FINGO') {
 
         setPhase('SPINNING');
 
+        // Rubber Banding: Identify critical numbers that would lead to an immediate win
+        const criticalNumbers = [];
+        if (gameMode === 'FINGO') {
+            for (let r = 0; r < 5; r++) {
+                const row = bingoCard.filter(c => c.row === r);
+                if (row.filter(c => c.marked).length === 4) {
+                    const unmarked = row.find(c => !c.marked);
+                    if (unmarked && unmarked.num !== 'FREE') criticalNumbers.push(unmarked.num);
+                }
+            }
+            for (let c = 0; c < 5; c++) {
+                const col = bingoCard.filter(cell => cell.col === c);
+                if (col.filter(cell => cell.marked).length === 4) {
+                    const unmarked = col.find(cell => !cell.marked);
+                    if (unmarked && unmarked.num !== 'FREE') criticalNumbers.push(unmarked.num);
+                }
+            }
+            const diag1 = [0, 1, 2, 3, 4].map(i => bingoCard.find(c => c.col === i && c.row === i));
+            if (diag1.filter(c => c.marked).length === 4) {
+                const unmarked = diag1.find(c => !c.marked);
+                if (unmarked && unmarked.num !== 'FREE') criticalNumbers.push(unmarked.num);
+            }
+            const diag2 = [0, 1, 2, 3, 4].map(i => bingoCard.find(c => c.col === (4 - i) && c.row === i));
+            if (diag2.filter(c => c.marked).length === 4) {
+                const unmarked = diag2.find(c => !c.marked);
+                if (unmarked && unmarked.num !== 'FREE') criticalNumbers.push(unmarked.num);
+            }
+        } else if (gameMode === 'BINGO') {
+            const unmarked = bingoCard.filter(c => !c.marked && !c.isFree);
+            if (unmarked.length <= 3) criticalNumbers.push(...unmarked.map(c => c.num));
+        } else if (gameMode === 'SPINGO') {
+            const marked = bingoCard.filter(c => c.marked);
+            if (marked.length === 4) criticalNumbers.push(...bingoCard.filter(c => !c.marked && !c.isFree).map(c => c.num));
+        }
+
         // Identify needed numbers
         const neededByCol = [[], [], [], [], []];
         bingoCard.forEach(cell => {
@@ -315,21 +354,44 @@ export function useGameLogic(gameMode = 'FINGO') {
         if (availableCols.length < targetCount) targetCount = availableCols.length;
 
         if (targetCount > 0) {
-            // Simplified selection logic
-            const allIndices = availableCols;
-            // Shuffle and pick targetCount
-            const shuffled = [...allIndices].sort(() => 0.5 - Math.random());
-            chosenIndices = shuffled.slice(0, targetCount);
+            // Force [0, 2, 4] for 3 targets if they are all available
+            if (targetCount === 3) {
+                if (availableCols.includes(0) && availableCols.includes(2) && availableCols.includes(4)) {
+                    chosenIndices = [0, 2, 4];
+                } else {
+                    targetCount = 2; // Downgrade to 2 to avoid adjacency
+                }
+            }
+
+            if (targetCount < 3) {
+                const shuffled = [...availableCols].sort(() => 0.5 - Math.random());
+                
+                // Anti-adjacency logic
+                for (let idx of shuffled) {
+                    if (!chosenIndices.some(c => Math.abs(c - idx) === 1)) {
+                        chosenIndices.push(idx);
+                    }
+                    if (chosenIndices.length >= targetCount) break;
+                }
+                // No fallback: if we can't find non-adjacent (e.g. only 0 and 1 available),
+                // we just settle for fewer golden buckets rather than breaking the adjacency rule.
+            }
         }
 
         // Fill Data
         const newSlots = [0, 0, 0, 0, 0];
+
         if (magicNumber !== null) {
             newSlots.fill(magicNumber);
         } else {
             for (let c = 0; c < 5; c++) {
                 if (chosenIndices.includes(c)) {
-                    const possible = neededByCol[c];
+                    let possible = neededByCol[c];
+                    // Rubber banding: if possible contains critical, 80% chance to remove them if other options exist
+                    const nonCritical = possible.filter(n => !criticalNumbers.includes(n));
+                    if (nonCritical.length > 0 && possible.length > nonCritical.length && Math.random() < 0.8) {
+                        possible = nonCritical;
+                    }
                     newSlots[c] = possible[Math.floor(Math.random() * possible.length)];
                 } else {
                     // Random trash
@@ -358,7 +420,7 @@ export function useGameLogic(gameMode = 'FINGO') {
         return true;
     };
 
-    const resolveTurn = (numberVal) => {
+    const resolveTurn = (numberVal, binIndex) => {
         let isDefeat = false;
         if (fireBallActive) setFireBallActive(false);
         if (magicActive) setMagicActive(false);
@@ -366,6 +428,7 @@ export function useGameLogic(gameMode = 'FINGO') {
         setSlotsResult([0, 0, 0, 0, 0]);
 
         let hit = false;
+
         const newCard = bingoCard.map(cell => {
             // Match number AND ensure it's not already marked
             if (cell.num === numberVal && !cell.marked) {
@@ -390,6 +453,7 @@ export function useGameLogic(gameMode = 'FINGO') {
 
             if (checkResult) {
                 // VICTORY
+                setWinStreak(prev => prev + 1);
                 setTimeout(() => {
                     setWinState(true);
                     setIsGameOver(true);
@@ -411,6 +475,7 @@ export function useGameLogic(gameMode = 'FINGO') {
                         setPhase('GAME_OVER');
                     }, 750);
                     isDefeat = true;
+                    setWinStreak(0);
                 } else {
                     setPhase('SPIN');
                 }
@@ -423,6 +488,7 @@ export function useGameLogic(gameMode = 'FINGO') {
                         setPhase('GAME_OVER');
                     }, 750);
                     isDefeat = true;
+                    setWinStreak(0);
                 }
             } else {
                 setPhase('SPIN');
@@ -461,6 +527,7 @@ export function useGameLogic(gameMode = 'FINGO') {
             coins,
             balls,
             level: currentLevel, // Expose only current level
+            winStreak,
             bingoCard,
             slotsResult,
             isGameOver,

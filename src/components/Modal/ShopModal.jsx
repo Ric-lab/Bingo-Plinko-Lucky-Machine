@@ -63,22 +63,22 @@ export default function ShopModal({
   // Skin Offers (Virtual Currency)
   const skinOffers = [
     {
-      id: 'Standard',
+      id: 'Royal Bingo',
       title: 'ROYAL BINGO',
       price: 0,
       gradient: 'from-amber-100 to-orange-100', // Royal/Classic feel
       textColor: 'text-amber-900'
     },
     {
-      id: 'Ocean',
-      title: 'OCEAN',
+      id: 'Beach',
+      title: 'BEACH',
       price: 5000,
       gradient: 'from-cyan-400 to-blue-600',
       textColor: 'text-white'
     },
     {
-      id: 'Forest',
-      title: 'FOREST',
+      id: 'Soccer',
+      title: 'SOCCER',
       price: 5000,
       gradient: 'from-emerald-400 to-green-700',
       textColor: 'text-white'

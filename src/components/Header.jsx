@@ -28,7 +28,7 @@ export default function Header({ level, coins, onOpenShop, onOpenThemes, onOpenM
                     <div
                         className="flex items-center justify-center"
                         style={{
-                            backgroundImage: `url(${getImage(balloonImage)})`,
+                            backgroundImage: `url(${getImmutableImage(balloonImage)})`,
                             backgroundSize: '100% 100%',
                             backgroundRepeat: 'no-repeat',
                             width: '90px',

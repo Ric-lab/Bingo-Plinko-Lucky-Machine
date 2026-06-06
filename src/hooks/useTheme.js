@@ -4,8 +4,8 @@ import { loadJSON, saveJSON } from '../utils/storage';
 const STORAGE_KEY = 'bplm.theme.v1';
 
 export function useTheme() {
-    const [currentSkin, setCurrentSkin] = useState('Standard');
-    const [ownedSkins, setOwnedSkins] = useState(['Standard']);
+    const [currentSkin, setCurrentSkin] = useState('Royal Bingo');
+    const [ownedSkins, setOwnedSkins] = useState(['Royal Bingo']);
 
     const hydratedRef = useRef(false);
     useEffect(() => {
@@ -34,9 +34,9 @@ export function useTheme() {
         }
     };
 
-    const getImage = (filename) => `/Images/${currentSkin}/${filename}`;
+    const getImage = (filename) => `/Images/${encodeURIComponent(currentSkin)}/${filename}`;
     const getImmutableImage = (filename) => `/Images/Immutable/${filename}`;
-    const getSound = (filename) => `/Audio/${currentSkin}/${filename}`;
+    const getSound = (filename) => `/Audio/Immutable/${filename}`;
     const getImmutableSound = (filename) => `/Audio/Immutable/${filename}`;
 
     return {

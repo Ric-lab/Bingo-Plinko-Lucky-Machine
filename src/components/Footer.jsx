@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Footer({ phase, onSpin, onPowerUp, balls, getImage }) {
+export default function Footer({ phase, onSpin, onPowerUp, balls, getImage, getImmutableImage }) {
     const busy = phase === 'RESOLVE' || phase === 'GAME_OVER';
 
     // spin.png is 720x256 (ratio ~2.8:1). At flex-1 width we let it define its own height
@@ -26,7 +26,7 @@ export default function Footer({ phase, onSpin, onPowerUp, balls, getImage }) {
                 disabled={busy}
             >
                 <img
-                    src={getImage('fireball.png')}
+                    src={getImmutableImage('fireball.png')}
                     alt="Fireball"
                     className="w-full h-full object-contain drop-shadow-lg"
                 />
@@ -44,7 +44,7 @@ export default function Footer({ phase, onSpin, onPowerUp, balls, getImage }) {
                 {/* Background pill image — fills button, object-fill OK because
                     the button's aspect ratio is intentionally made to match ~2.8:1 */}
                 <img
-                    src={getImage('spin.png')}
+                    src={getImmutableImage('spin.png')}
                     alt="Spin"
                     className="absolute inset-0 w-full h-full object-fill"
                     style={{ opacity: phase !== 'SPIN' ? 0.5 : 1 }}
@@ -64,7 +64,7 @@ export default function Footer({ phase, onSpin, onPowerUp, balls, getImage }) {
                 disabled={busy}
             >
                 <img
-                    src={getImage('magicnumber.png')}
+                    src={getImmutableImage('magicnumber.png')}
                     alt="Magic Number"
                     className="w-full h-full object-contain drop-shadow-lg"
                 />

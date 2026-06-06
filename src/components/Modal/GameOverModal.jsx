@@ -49,6 +49,7 @@ export default function GameOverModal({
                     {/* Button Shine Effect */}
                     <div className="absolute inset-0 rounded-full bg-white/20 skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                 </button>
+
             </div>
         </div>
     );

@@ -221,7 +221,7 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
                                     onFinish={() => setRevealed(prev => ({ ...prev, [i]: true }))}
                                 />
                             ) : (
-                                <span className="text-3xl font-black drop-shadow-md relative z-10">
+                                <span className="text-3xl font-black drop-shadow-md relative z-10 flex items-center justify-center">
                                     {num > 0 ? num : COLS[i]}
                                 </span>
                             )}
