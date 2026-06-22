@@ -6,6 +6,7 @@ export default function ConfirmationReward({
     onClose,
     title = "Reward Granted!",
     message = "Your power-up is ready.",
+    // eslint-disable-next-line no-unused-vars
     Icon = Check
 }) {
     if (!isOpen) return null;

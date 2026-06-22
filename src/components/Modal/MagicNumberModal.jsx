@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { X, Check, Wand2 } from 'lucide-react';
 import ConfirmationReward from './ConfirmationReward';
 
+import { showRewardedAd } from '../../services/adService';
+
 export default function MagicNumberModal({
     isOpen,
     onClose,
@@ -10,7 +12,8 @@ export default function MagicNumberModal({
     showMessage,  // For feedback
     bingoCard,
     playClick,
-    onOpenShop
+    onOpenShop,
+    noAds = false
 }) {
     const [selectedId, setSelectedId] = useState(null);
     const [showReward, setShowReward] = useState(false); // New state
@@ -44,18 +47,27 @@ export default function MagicNumberModal({
         }
     };
 
-    const handleWatchVideo = () => {
+    const handleWatchVideo = async () => {
         playClick?.();
         if (!selectedNumber) return;
 
-        // Simulated Video
-        showMessage('info', 'Watching Ad...', 'Please wait 2 seconds...', 2000);
-        setTimeout(() => {
+        if (noAds) {
+            // Bypass ad instantly if No Ads is purchased
+            onMagicSpin(selectedNumber, 0);
+            setShowReward(true);
+            return;
+        }
+
+        showMessage('info', 'Loading Ad...', 'Please wait...', 1000);
+        const success = await showRewardedAd();
+        if (success) {
             // Free cost
             onMagicSpin(selectedNumber, 0);
             // Show Reward Modal instead of closing immediately
             setShowReward(true);
-        }, 2500);
+        } else {
+            showMessage('error', 'Oops!', 'Ad failed to complete.');
+        }
     };
 
     const handleCloseReward = () => {

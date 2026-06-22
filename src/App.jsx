@@ -19,8 +19,28 @@ import NextLevelModal from './components/Modal/NextLevelModal';
 import FireballModal from './components/Modal/FireballModal';
 import ShopModal from './components/Modal/ShopModal';
 import LuckySpin from './components/LuckySpin';
+import { initAds, showBanner, removeBanner, showInterstitialAd } from './services/adService';
+import { initPurchases, isNoAdsPurchased } from './services/purchaseService';
+import Tutorial from './components/Tutorial';
+import { signIn as cloudSignIn, isAuthenticated as isCloudAuthenticated, saveToCloud, loadFromCloud } from './services/cloudSaveService';
 
 export default function App() {
+  const [noAds, setNoAds] = useState(() => isNoAdsPurchased());
+  const [tutorialComplete, setTutorialComplete] = useState(() => {
+    try {
+      return localStorage.getItem('bplm.tutorialComplete') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [cloudSignedIn, setCloudSignedIn] = useState(false);
+
+  useEffect(() => {
+    initAds();
+    initPurchases();
+  }, []);
+
   const [audioSettings, setAudioSettings] = useState({
     music: 1, // 0: Off, 0.5: Low, 1: High
     sfx: 1,
@@ -49,8 +69,8 @@ export default function App() {
   const [gameMode, setGameMode] = useState('FINGO');
 
   const {
-    state: { coins, balls, level, winStreak, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive, luckySpinReward },
-    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, completeLuckySpin }
+    state: { coins, balls, level, levels, winStreak, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive, luckySpinReward },
+    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, completeLuckySpin, syncGameState }
   } = useGameLogic(gameMode);
 
   const {
@@ -58,6 +78,7 @@ export default function App() {
     setCurrentSkin,
     ownedSkins,
     unlockSkin,
+    syncThemeState,
     getImage,
     getImmutableImage,
     getSound,
@@ -163,6 +184,149 @@ export default function App() {
   const closeMessage = () => {
     setMessageModal(prev => ({ ...prev, isOpen: false }));
   };
+
+  const handleSyncCloud = async (quiet = false) => {
+    if (!quiet) showMessage('info', 'CONECTANDO', 'Acessando o Google Play Games...', 3000);
+
+    const auth = await cloudSignIn();
+    setCloudSignedIn(auth.isAuthenticated);
+
+    if (!auth.isAuthenticated) {
+      if (!quiet) showMessage('error', 'ERRO DE CONEXÃO', 'Não foi possível conectar ao Google Play Games.', 3000);
+      return;
+    }
+
+    if (!quiet) showMessage('info', 'SINCRONIZANDO', 'Sincronizando seu progresso...', 3000);
+
+    try {
+      const cloudData = await loadFromCloud();
+      const localSavedAt = localStorage.getItem('bplm.localSavedAt') || '';
+
+      if (cloudData) {
+        const isCloudNewer = !localSavedAt || new Date(cloudData.savedAt) > new Date(localSavedAt);
+
+        if (isCloudNewer) {
+          // Sync from cloud to local
+          syncGameState(cloudData);
+          syncThemeState(cloudData);
+          if (cloudData.noAdsPurchased !== undefined) {
+            setNoAds(cloudData.noAdsPurchased);
+            localStorage.setItem('bplm.noads.v1', cloudData.noAdsPurchased ? 'true' : 'false');
+          }
+          if (cloudData.tutorialComplete !== undefined) {
+            localStorage.setItem('bplm.tutorialComplete', cloudData.tutorialComplete ? 'true' : 'false');
+            setTutorialComplete(cloudData.tutorialComplete);
+          }
+          localStorage.setItem('bplm.localSavedAt', cloudData.savedAt);
+          showMessage('celebration', 'PROGRESSO CARREGADO', 'Seu progresso da nuvem foi restaurado com sucesso!', 3000);
+        } else {
+          // Local is newer, upload local to cloud
+          const currentData = {
+            coins,
+            levels: { FINGO: levels?.FINGO || 1, BINGO: levels?.BINGO || 1, SPINGO: levels?.SPINGO || 1 },
+            winStreak,
+            ownedSkins,
+            currentSkin,
+            noAdsPurchased: noAds,
+            tutorialComplete,
+            savedAt: localSavedAt || new Date().toISOString()
+          };
+          await saveToCloud(currentData);
+          if (!quiet) showMessage('celebration', 'PROGRESSO ENVIADO', 'Seu progresso local foi salvo na nuvem!', 3000);
+        }
+      } else {
+        // First save to cloud
+        const now = new Date().toISOString();
+        localStorage.setItem('bplm.localSavedAt', now);
+        const currentData = {
+          coins,
+          levels: { FINGO: levels?.FINGO || 1, BINGO: levels?.BINGO || 1, SPINGO: levels?.SPINGO || 1 },
+          winStreak,
+          ownedSkins,
+          currentSkin,
+          noAdsPurchased: noAds,
+          tutorialComplete,
+          savedAt: now
+        };
+        await saveToCloud(currentData);
+        if (!quiet) showMessage('celebration', 'NUVEM ATUALIZADA', 'Primeiro salvamento na nuvem concluído com sucesso!', 3000);
+      }
+    } catch (e) {
+      console.error('[CloudSync] Sync error:', e);
+      if (!quiet) showMessage('error', 'ERRO DE SINCRONIZAÇÃO', 'Ocorreu um erro ao carregar/salvar os dados.', 3000);
+    }
+  };
+
+  const handleSyncCloudRef = useRef(handleSyncCloud);
+  useEffect(() => {
+    handleSyncCloudRef.current = handleSyncCloud;
+  });
+
+  // Auto-sync on mount
+  useEffect(() => {
+    const initAndSync = async () => {
+      const auth = await isCloudAuthenticated();
+      setCloudSignedIn(auth.isAuthenticated);
+      if (auth.isAuthenticated) {
+        await handleSyncCloudRef.current(true);
+      }
+    };
+    const timer = setTimeout(initAndSync, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Auto-save debounced effect on changes
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (!cloudSignedIn) return;
+
+    const autoSave = async () => {
+      const now = new Date().toISOString();
+      localStorage.setItem('bplm.localSavedAt', now);
+      const currentData = {
+        coins,
+        levels: { FINGO: levels?.FINGO || 1, BINGO: levels?.BINGO || 1, SPINGO: levels?.SPINGO || 1 },
+        winStreak,
+        ownedSkins,
+        currentSkin,
+        noAdsPurchased: noAds,
+        tutorialComplete,
+        savedAt: now
+      };
+      await saveToCloud(currentData);
+    };
+
+    const timer = setTimeout(autoSave, 2500);
+    return () => clearTimeout(timer);
+  }, [coins, levels, winStreak, ownedSkins, currentSkin, noAds, tutorialComplete, cloudSignedIn]);
+
+  useEffect(() => {
+    if (!gameStarted && !noAds) {
+      showBanner();
+    } else {
+      removeBanner();
+    }
+    return () => {
+      removeBanner();
+    };
+  }, [gameStarted, noAds]);
+
+  const handleNextLevel = async () => {
+    if (!noAds) {
+      await showInterstitialAd();
+    }
+    nextLevel();
+  };
+
+  const handleNoAdsPurchased = () => {
+    setNoAds(true);
+    showMessage('celebration', 'PARABÉNS!', 'Todos os anúncios foram removidos!', 3000);
+  };
+
   const canvasRef = useRef();
 
   const handleSlotClick = (colIndex) => {
@@ -303,6 +467,8 @@ export default function App() {
         onGoHome={() => setGameStarted(false)}
         settings={audioSettings}
         onUpdateSettings={setAudioSettings}
+        cloudSignedIn={cloudSignedIn}
+        onSyncCloud={() => handleSyncCloud(false)}
       />
 
       {/* Bingo Card (Compact: 85% width) */}
@@ -374,6 +540,7 @@ export default function App() {
         bingoCard={bingoCard}
         playClick={playClick}
         onOpenShop={() => openShop('coins')}
+        noAds={noAds}
       />
 
       <FireballModal
@@ -384,6 +551,7 @@ export default function App() {
         showMessage={showMessage}
         playClick={playClick}
         onOpenShop={() => openShop('coins')}
+        noAds={noAds}
       />
 
       <MessageModal
@@ -400,7 +568,8 @@ export default function App() {
         winState ? (
           <NextLevelModal
             level={level}
-            onNextLevel={nextLevel}
+            gameMode={gameMode}
+            onNextLevel={handleNextLevel}
             playClick={playClick}
             playBingo={playBingo}
           />
@@ -411,6 +580,7 @@ export default function App() {
             buyItem={buyItem}
             showMessage={showMessage}
             playClick={playClick}
+            noAds={noAds}
           />
         )
       )}
@@ -427,6 +597,7 @@ export default function App() {
         ownedSkins={ownedSkins}
         unlockSkin={unlockSkin}
         initialTab={shopTab}
+        onNoAdsPurchased={handleNoAdsPurchased}
       />
       {/* Lucky Wheel Bonus Phase */}
       {phase === 'BONUS_WHEEL' && (
@@ -435,6 +606,20 @@ export default function App() {
           completeLuckySpin={completeLuckySpin}
           reward={luckySpinReward}
           playTicker={playPalheta}
+        />
+      )}
+
+      {/* Interactive Step-by-Step Tutorial Overlay */}
+      {!tutorialComplete && level === 1 && gameStarted && (
+        <Tutorial
+          onClose={() => {
+            try {
+              localStorage.setItem('bplm.tutorialComplete', 'true');
+            } catch {
+              // Ignore
+            }
+            setTutorialComplete(true);
+          }}
         />
       )}
     </div>

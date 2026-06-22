@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingCart, Star, Crown, Coins, Palette, CheckCircle2, Lock, Trophy } from 'lucide-react';
+import { buyCoins, buyNoAds } from '../../services/purchaseService';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Flip to true once real Google Play Billing (or equivalent) is wired up.
 // While false, real-money offers (coin packs, No Ads) are hidden so the build
@@ -17,7 +18,8 @@ export default function ShopModal({
   setCurrentSkin,
   ownedSkins,
   unlockSkin,
-  initialTab
+  initialTab,
+  onNoAdsPurchased
 }) {
 
   const [activeTab, setActiveTab] = useState(IAP_ENABLED ? 'coins' : 'skins'); // 'coins' | 'skins'
@@ -63,11 +65,18 @@ export default function ShopModal({
   // Skin Offers (Virtual Currency)
   const skinOffers = [
     {
-      id: 'Royal Bingo',
-      title: 'ROYAL BINGO',
+      id: 'Normal',
+      title: 'NORMAL',
       price: 0,
-      gradient: 'from-amber-100 to-orange-100', // Royal/Classic feel
-      textColor: 'text-amber-900'
+      gradient: 'from-gray-100 to-gray-300',
+      textColor: 'text-gray-800'
+    },
+    {
+      id: 'Pets',
+      title: 'PETS',
+      price: 2500,
+      gradient: 'from-orange-200 to-yellow-200',
+      textColor: 'text-orange-800'
     },
     {
       id: 'Beach',
@@ -77,44 +86,28 @@ export default function ShopModal({
       textColor: 'text-white'
     },
     {
-      id: 'Soccer',
-      title: 'SOCCER',
-      price: 5000,
-      gradient: 'from-emerald-400 to-green-700',
-      textColor: 'text-white'
-    },
-    {
-      id: 'Tea',
-      title: 'TEA',
-      price: 7500,
-      gradient: 'from-rose-200 to-pink-300',
-      textColor: 'text-rose-900'
-    },
-    {
-      id: 'Pets',
-      title: 'PETS',
-      price: 7500,
-      gradient: 'from-orange-200 to-yellow-200',
-      textColor: 'text-orange-800'
-    },
-    {
-      id: 'OldGame',
-      title: 'OLD GAME',
+      id: 'Royal Bingo',
+      title: 'ROYAL BINGO',
       price: 10000,
-      gradient: 'from-gray-600 to-gray-800',
-      textColor: 'text-gray-200'
+      gradient: 'from-amber-100 to-orange-100', // Royal/Classic feel
+      textColor: 'text-amber-900'
     }
   ];
 
-  const handleBuyCoins = (offer) => {
+  const handleBuyCoins = async (offer) => {
     playClick?.();
-    // Simulation - dev mode credits coins directly. Replace with real payment integration before launch.
-    if (buyItem) buyItem('coins', -offer.coins);
+    const coinsPurchased = await buyCoins(offer.id);
+    if (coinsPurchased > 0) {
+      if (buyItem) buyItem('coins', -coinsPurchased);
+    }
   };
 
-  const handleBuyNoAds = () => {
+  const handleBuyNoAds = async () => {
     playClick?.();
-    // TODO: wire up real No Ads purchase flow when payment integration is added.
+    const success = await buyNoAds();
+    if (success && onNoAdsPurchased) {
+      onNoAdsPurchased();
+    }
   };
 
   const handleSkinAction = (skin) => {

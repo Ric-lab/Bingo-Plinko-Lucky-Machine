@@ -8,7 +8,7 @@ const PRIZE_SLICES = [
 ];
 
 export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, playTicker }) {
-    const [uiState, setUiState] = useState('IDLE'); // IDLE, SPINNING, SHOW_RESULT
+    const [uiState, setUiState] = useState(() => (reward !== null ? 'SHOW_RESULT' : 'IDLE')); // IDLE, SPINNING, SHOW_RESULT
     const [rotation, setRotation] = useState(0);
     const [displayReward, setDisplayReward] = useState(null);
 
@@ -16,16 +16,6 @@ export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, pl
     const lastSlotRef = useRef(0);
     // Audio handled by parent via playTicker
 
-
-    // Effect to handle the spin when specific reward is received
-    useEffect(() => {
-        if (reward !== null && uiState === 'IDLE') {
-            // Logic handled in handleSpin usually, but if reward comes from external:
-            // This case might strictly be "re-mounting" with a reward. 
-            // If reward is already there on mount, show result immediately.
-            setUiState('SHOW_RESULT');
-        }
-    }, []); // On mount only
 
     // Sound effect logic
     useEffect(() => {
@@ -77,7 +67,7 @@ export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, pl
         return () => {
             cancelAnimationFrame(animationFrameId);
         };
-    }, [uiState]);
+    }, [uiState, playTicker]);
 
     const handleSpin = () => {
         if (uiState !== 'IDLE') return;
@@ -129,7 +119,7 @@ export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, pl
         <div className="absolute inset-0 z-[100] bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 flex flex-col items-center justify-center p-0 text-white overflow-hidden">
 
             {/* Background Effects */}
-            <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] animate-pulse" />
+            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.15)_1px,_transparent_1px)] bg-[size:24px_24px] animate-pulse" />
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/30 to-transparent pointer-events-none" />
 
             <div className="relative z-10 flex flex-col items-center max-w-md w-full gap-8">

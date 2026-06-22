@@ -1,24 +1,24 @@
 import { useRef, useEffect, useCallback } from 'react';
 
-export function useSound(src, options = { volume: 1.0, loop: false, multi: false }) {
+export function useSound(src, { volume = 1.0, loop = false, multi = false } = {}) {
     const audioRef = useRef(null);
     const poolRef = useRef([]); // For multi-shot sounds
 
     // Track options with a ref to keep callbacks stable
-    const optionsRef = useRef(options);
+    const optionsRef = useRef({ volume, loop, multi });
 
     // Update ref when options change
     useEffect(() => {
-        optionsRef.current = options;
-    }, [options.volume, options.loop, options.multi]);
+        optionsRef.current = { volume, loop, multi };
+    }, [volume, loop, multi]);
 
     useEffect(() => {
         // Initialize main audio (Only when SRC changes)
         audioRef.current = new Audio(src);
 
         // Apply initial settings
-        audioRef.current.volume = options.volume;
-        audioRef.current.loop = options.loop;
+        audioRef.current.volume = volume;
+        audioRef.current.loop = loop;
 
         return () => {
             if (audioRef.current) {
@@ -29,15 +29,15 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
             poolRef.current.forEach(a => a.pause());
             poolRef.current = [];
         };
-    }, [src]);
+    }, [src, volume, loop]);
 
     // React to Volume/Loop changes properly (Dynamic update)
     useEffect(() => {
         if (audioRef.current) {
-            audioRef.current.volume = options.volume;
-            audioRef.current.loop = options.loop;
+            audioRef.current.volume = volume;
+            audioRef.current.loop = loop;
         }
-    }, [options.volume, options.loop]);
+    }, [volume, loop]);
 
     const play = useCallback((overrideOptions = {}) => {
         if (!audioRef.current) return;
@@ -53,7 +53,7 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
                     available.currentTime = 0;
                     available.volume = opts.volume; // Reset volume in case it changed
                     available.playbackRate = rate;
-                    available.play().catch(e => console.warn("Audio play error", e));
+                    available.play().catch(() => {});
                     return;
                 }
             }
@@ -61,7 +61,7 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
             const clone = audioRef.current.cloneNode();
             clone.volume = opts.volume;
             clone.playbackRate = rate;
-            clone.play().catch(e => console.warn("Audio play error", e));
+            clone.play().catch(() => {});
             poolRef.current.push(clone);
 
             if (poolRef.current.length > 20) {

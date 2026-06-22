@@ -3,6 +3,8 @@ import { Flame } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import ConfirmationReward from './ConfirmationReward';
 
+import { showRewardedAd } from '../../services/adService';
+
 export default function FireballModal({
     isOpen,
     onClose,
@@ -10,7 +12,8 @@ export default function FireballModal({
     buyItem,
     showMessage,
     playClick,
-    onOpenShop
+    onOpenShop,
+    noAds = false
 }) {
     const [showReward, setShowReward] = useState(false);
     const COST = 250;
@@ -30,17 +33,23 @@ export default function FireballModal({
         }
     };
 
-    const handleWatchVideo = () => {
+    const handleWatchVideo = async () => {
         playClick?.();
-        // Simulated Ad Logic
-        showMessage('info', 'Watching Ad...', 'Please wait 2 seconds...', 2000);
-
-        setTimeout(() => {
-            // Grant reward for free
+        if (noAds) {
+            // Bypass ad instantly if No Ads is purchased
             buyItem('fireball', 0);
-            // Always show reward modal after video
             setShowReward(true);
-        }, 2500);
+            return;
+        }
+        showMessage('info', 'Loading Ad...', 'Please wait...', 1000);
+
+        const success = await showRewardedAd();
+        if (success) {
+            buyItem('fireball', 0);
+            setShowReward(true);
+        } else {
+            showMessage('error', 'Oops!', 'Ad failed to complete.');
+        }
     };
 
     const handleCloseReward = () => {

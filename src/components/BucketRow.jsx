@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
 const COLS = ['L', 'U', 'C', 'K', 'Y'];
@@ -45,10 +46,26 @@ const RollingSlot = ({ target, delay, onFinish }) => {
     );
 };
 
+// --- DETERMINISTIC PSEUDO-RANDOM GENERATOR FOR PURE RENDER ---
+const getDeterministicRandom = (seed) => {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+};
+
 // --- REUSABLE FLAME UNIT ---
 const FlameUnit = ({ delay, scale, xOffset, id }) => {
     // Unique ID for gradients based on xOffset/scale to allow slight variations if needed, or just standard gradients
     const gradId = `fire-grad-${id}`;
+
+    // Deterministic random numbers based on id
+    const r1 = getDeterministicRandom(id + 1);
+    const r2 = getDeterministicRandom(id + 2);
+    const r3 = getDeterministicRandom(id + 3);
+    const r4 = getDeterministicRandom(id + 4);
+    const r5 = getDeterministicRandom(id + 5);
+    const r6 = getDeterministicRandom(id + 6);
+    const r7 = getDeterministicRandom(id + 7);
+    const r8 = getDeterministicRandom(id + 8);
 
     return (
         <div className="absolute bottom-0" style={{ left: `${50 + xOffset}%`, transform: `translateX(-50%) scale(${scale})` }}>
@@ -74,7 +91,7 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
                 {/* Individual Glow Blur */}
                 <motion.div
                     animate={{ opacity: [0.5, 0.8, 0.5], scale: [1, 1.1, 1] }}
-                    transition={{ duration: 1.5 + Math.random(), repeat: Infinity, ease: "easeInOut", delay: delay }}
+                    transition={{ duration: 1.5 + r1, repeat: Infinity, ease: "easeInOut", delay: delay }}
                     className="absolute bottom-2 left-0 right-0 -translate-x-1/2 w-10 h-12 bg-orange-500/50 rounded-full blur-[15px] z-[-1]"
                 />
 
@@ -83,7 +100,7 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
                     viewBox="0 0 100 100"
                     className="absolute bottom-0 w-10 h-16 drop-shadow-sm"
                     animate={{ scaleY: [1, 1.1, 0.9, 1], scaleX: [1, 0.9, 1.1, 1], skewX: [0, 2, -2, 0] }}
-                    transition={{ duration: 0.8 + Math.random() * 0.4, repeat: Infinity, ease: "easeInOut", delay: delay }}
+                    transition={{ duration: 0.8 + r2 * 0.4, repeat: Infinity, ease: "easeInOut", delay: delay }}
                 >
                     <path d="M50 0 C65 40 85 50 85 80 C85 100 70 100 50 100 C30 100 15 100 15 80 C15 50 35 40 50 0 Z" fill={`url(#${gradId}-red)`} />
                 </motion.svg>
@@ -93,7 +110,7 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
                     viewBox="0 0 100 100"
                     className="absolute bottom-0 w-8 h-12"
                     animate={{ scaleY: [1, 1.15, 0.9], rotate: [-3, 3, -3] }}
-                    transition={{ duration: 0.6 + Math.random() * 0.3, repeat: Infinity, ease: "easeInOut", delay: delay + 0.1 }}
+                    transition={{ duration: 0.6 + r3 * 0.3, repeat: Infinity, ease: "easeInOut", delay: delay + 0.1 }}
                     style={{ originX: 0.5, originY: 1 }}
                 >
                     <path d="M50 10 C60 45 75 55 75 80 C75 95 65 95 50 95 C35 95 25 95 25 80 C25 55 40 45 50 10 Z" fill={`url(#${gradId}-orange)`} />
@@ -104,7 +121,7 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
                     viewBox="0 0 100 100"
                     className="absolute bottom-0 w-4 h-8"
                     animate={{ scale: [1, 1.3, 1] }}
-                    transition={{ duration: 0.4 + Math.random() * 0.2, repeat: Infinity, ease: "easeInOut", delay: delay }}
+                    transition={{ duration: 0.4 + r4 * 0.2, repeat: Infinity, ease: "easeInOut", delay: delay }}
                     style={{ originX: 0.5, originY: 1 }}
                 >
                     <path d="M50 20 C58 50 65 60 65 80 C65 90 60 95 50 95 C40 95 35 90 35 80 C35 60 42 50 50 20 Z" fill={`url(#${gradId}-yellow)`} />
@@ -112,13 +129,13 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
 
                 {/* Sparkling Embers */}
                 <motion.div
-                    animate={{ y: [0, -40], opacity: [1, 0], x: [0, Math.random() * 10 - 5] }}
-                    transition={{ duration: 0.8 + Math.random() * 0.5, repeat: Infinity, ease: "easeOut", delay: delay }}
+                    animate={{ y: [0, -40], opacity: [1, 0], x: [0, r5 * 10 - 5] }}
+                    transition={{ duration: 0.8 + r6 * 0.5, repeat: Infinity, ease: "easeOut", delay: delay }}
                     className="absolute bottom-4 left-1/2 w-0.5 h-0.5 bg-yellow-200 rounded-full shadow-[0_0_2px_rgba(255,255,255,0.8)]"
                 />
                 <motion.div
-                    animate={{ y: [0, -30], opacity: [1, 0], x: [0, Math.random() * 10 - 5] }}
-                    transition={{ duration: 1 + Math.random() * 0.5, repeat: Infinity, ease: "easeOut", delay: delay + 0.3 }}
+                    animate={{ y: [0, -30], opacity: [1, 0], x: [0, r7 * 10 - 5] }}
+                    transition={{ duration: 1 + r8 * 0.5, repeat: Infinity, ease: "easeOut", delay: delay + 0.3 }}
                     className="absolute bottom-2 left-1/2 w-0.5 h-0.5 bg-orange-200 rounded-full shadow-[0_0_2px_rgba(255,255,255,0.8)]"
                 />
             </div>
@@ -149,13 +166,15 @@ const DistributedFire = () => {
 export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, fireBallActive, magicActive, playClick }) {
     // State to track which slots have finished spinning
     const [revealed, setRevealed] = useState({});
+    const [prevPhase, setPrevPhase] = useState(phase);
 
-    // Reset revealed state when spin starts (useLayoutEffect to prevent flash)
-    useLayoutEffect(() => {
+    // Reset revealed state when spin starts during render phase (avoids cascading effect renders)
+    if (phase !== prevPhase) {
+        setPrevPhase(phase);
         if (phase === 'SPINNING') {
             setRevealed({});
         }
-    }, [phase]);
+    }
 
     // Check if a number is "useful" (exists in card and not marked)
     const checkIsUseful = (num) => {
@@ -165,7 +184,7 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
     };
 
     return (
-        <div className="absolute bottom-0 left-0 right-0 h-[70px] flex items-end justify-between w-full px-0 z-20 pointer-events-auto">
+        <div id="tutorial-bucket-row" className="absolute bottom-0 left-0 right-0 h-[70px] flex items-end justify-between w-full px-0 z-20 pointer-events-auto">
             {slotsResult.map((num, i) => {
                 const isUseful = checkIsUseful(num);
                 const isFireTarget = fireBallActive;

@@ -35,6 +35,7 @@ export default function Footer({ phase, onSpin, onPowerUp, balls, getImage, getI
             {/* SPIN — flex-1, height drives from image ratio (720x256 ≈ 2.8:1).
                 We clamp the height so it stays proportional inside the 96px footer. */}
             <button
+                id="tutorial-spin-button"
                 onClick={onSpin}
                 disabled={phase !== 'SPIN'}
                 className={`flex-1 relative transition-all duration-100 active:scale-[0.97]

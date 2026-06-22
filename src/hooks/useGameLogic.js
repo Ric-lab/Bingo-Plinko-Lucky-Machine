@@ -131,7 +131,7 @@ export function useGameLogic(gameMode = 'FINGO') {
             if (cancelled) return;
             if (saved) {
                 if (typeof saved.coins === 'number') {
-                    setCoins(saved.coins < 50000 ? 50000 : saved.coins);
+                    setCoins(saved.coins);
                 }
                 if (saved.levels) {
                     setLevels(prev => ({ ...prev, ...saved.levels }));
@@ -151,7 +151,20 @@ export function useGameLogic(gameMode = 'FINGO') {
     // Derived current level
     const currentLevel = levels[gameMode || 'FINGO'];
 
-    const [balls, setBalls] = useState(50);
+    const [balls, _setBalls] = useState(50);
+    const ballsRef = useRef(50);
+    const setBalls = useCallback((val) => {
+        if (typeof val === 'function') {
+            _setBalls(prev => {
+                const res = val(prev);
+                ballsRef.current = res;
+                return res;
+            });
+        } else {
+            _setBalls(val);
+            ballsRef.current = val;
+        }
+    }, []);
     const [bingoCard, setBingoCard] = useState([]);
     const [slotsResult, setSlotsResult] = useState([0, 0, 0, 0, 0]);
     const [isGameOver, setIsGameOver] = useState(false);
@@ -218,7 +231,7 @@ export function useGameLogic(gameMode = 'FINGO') {
         setBingoCard(newCard);
         setWinState(false);
         setIsGameOver(false);
-        setPhase('SPIN');
+        setPhase(prev => prev === 'BONUS_WHEEL' ? 'BONUS_WHEEL' : 'SPIN');
 
         // Set Balls based on Mode
         setBalls(config.balls);
@@ -227,7 +240,7 @@ export function useGameLogic(gameMode = 'FINGO') {
         setFireBallActive(false);
         setMagicActive(false);
 
-    }, [gameMode, levels, config]); // Re-init if mode or level changes
+    }, [gameMode, levels, config, setBalls]); // Re-init if mode or level changes
 
     // Init on Mount (and when mode changes)
     useEffect(() => {
@@ -239,11 +252,12 @@ export function useGameLogic(gameMode = 'FINGO') {
     const nextLevel = () => {
         const lvl = levels[gameMode || 'FINGO'];
 
-        // Check for Lucky Wheel Trigger (every 25 levels) GLOBAL? Or per mode? "Global" logic usually
-        // User said: "Persistência de Nível... individualmente". "Carteira de coins... global".
-        // Lucky Spin is usually tied to progression. Let's keep it tied to the active mode's level progression.
         if (lvl % 25 === 0 && phase !== 'BONUS_WHEEL') {
             setPhase('BONUS_WHEEL');
+            setLevels(prev => ({
+                ...prev,
+                [gameMode]: prev[gameMode] + 1
+            }));
             return;
         }
 
@@ -276,11 +290,7 @@ export function useGameLogic(gameMode = 'FINGO') {
 
     const completeLuckySpin = () => {
         setLuckySpinReward(null);
-        // Advance Level after spin
-        setLevels(prev => ({
-            ...prev,
-            [gameMode]: prev[gameMode] + 1
-        }));
+        setPhase('SPIN');
     };
 
     const startSpin = (magicNumberOverride = null) => {
@@ -414,13 +424,13 @@ export function useGameLogic(gameMode = 'FINGO') {
     };
 
     const dropBall = () => {
-        if (phase !== 'DROP' || balls <= 0) return false;
+        if (phase !== 'DROP' || ballsRef.current <= 0) return false;
         setPhase('RESOLVE');
         setBalls(b => b - 1);
         return true;
     };
 
-    const resolveTurn = (numberVal, binIndex) => {
+    const resolveTurn = (numberVal) => {
         let isDefeat = false;
         if (fireBallActive) setFireBallActive(false);
         if (magicActive) setMagicActive(false);
@@ -469,7 +479,7 @@ export function useGameLogic(gameMode = 'FINGO') {
                 }, 1100);
             } else {
                 // NO Win yet
-                if (balls <= 0) {
+                if (ballsRef.current <= 0) {
                     setTimeout(() => {
                         setIsGameOver(true);
                         setPhase('GAME_OVER');
@@ -481,7 +491,7 @@ export function useGameLogic(gameMode = 'FINGO') {
                 }
             }
         } else {
-            if (balls <= 0) {
+            if (ballsRef.current <= 0) {
                 if (!winState) {
                     setTimeout(() => {
                         setIsGameOver(true);
@@ -522,11 +532,19 @@ export function useGameLogic(gameMode = 'FINGO') {
         return false;
     };
 
+    const syncGameState = useCallback((data) => {
+        if (!data) return;
+        if (typeof data.coins === 'number') setCoins(data.coins);
+        if (data.levels) setLevels(prev => ({ ...prev, ...data.levels }));
+        if (typeof data.winStreak === 'number') setWinStreak(data.winStreak);
+    }, []);
+
     return {
         state: {
             coins,
             balls,
             level: currentLevel, // Expose only current level
+            levels, // Expose all levels for cloud save
             winStreak,
             bingoCard,
             slotsResult,
@@ -545,7 +563,8 @@ export function useGameLogic(gameMode = 'FINGO') {
             buyItem,
             nextLevel,
             spinLuckySpin,
-            completeLuckySpin
+            completeLuckySpin,
+            syncGameState
         }
     };
 }

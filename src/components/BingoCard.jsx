@@ -14,13 +14,14 @@ const THEMES = [
     { header: '#8b5cf6', text: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
 ];
 
-export default function BingoCard({ card, level, getImage, getImmutableImage }) {
+export default function BingoCard({ card, getImmutableImage }) {
     if (!card || card.length === 0) return <div className="p-4 text-center">Loading...</div>;
 
     return (
         <div className="w-full relative select-none flex flex-col items-center font-sans">
             {/* Container for the Grid */}
             <div
+                id="tutorial-bingo-card"
                 className="w-full max-w-[500px] p-1 shadow-2xl flex flex-col items-center rounded-xl"
                 style={{
                     backgroundImage: `url(${getImmutableImage('card.png')})`,

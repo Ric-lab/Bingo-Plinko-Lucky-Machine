@@ -9,11 +9,12 @@ export default function ConfirmationModal({
     message,
     confirmLabel = "Confirm",
     cancelLabel = "Cancel",
-    Icon = HelpCircle,
     colorTheme = "indigo", // indigo, red, green, etc.
     showCancel = true,
     secondaryAction = null,
-    secondaryLabel = "Secondary"
+    secondaryLabel = "Secondary",
+    // eslint-disable-next-line no-unused-vars
+    icon: Icon = HelpCircle
 }) {
     if (!isOpen) return null;
 
@@ -96,7 +97,6 @@ export default function ConfirmationModal({
                         <button
                             onClick={() => {
                                 onConfirm();
-                                onClose();
                             }}
                             className={`w-full py-4 rounded-2xl font-black text-xl uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-white ${theme.btn}`}
                         >

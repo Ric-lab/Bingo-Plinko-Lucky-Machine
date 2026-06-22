@@ -1,8 +1,52 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function MessageModal({ isOpen, onClose, type = 'info', title, message }) {
+    const canvasRef = useRef(null);
+
+    // Trigger confetti on mount (Optimized Burst)
+    useEffect(() => {
+        if (isOpen && type === 'celebration' && canvasRef.current) {
+            const myConfetti = confetti.create(canvasRef.current, {
+                resize: true,
+                useWorker: true
+            });
+
+            // Responsive Settings
+            const isMobile = window.innerWidth < 768;
+            const particleCount = isMobile ? 60 : 100;
+            const scalar = isMobile ? 1.2 : 1.0; // Bigger on mobile
+            const velocity = isMobile ? 60 : 80; // Shoot higher on mobile (taller screen)
+
+            const defaults = {
+                spread: isMobile ? 50 : 70,
+                ticks: 200,
+                gravity: 1.2,
+                decay: 0.92,
+                startVelocity: velocity,
+                colors: ['#FFD700', '#FFA500', '#DAA520', '#FFFFFF'],
+                scalar
+            };
+
+            // 1. Left Cannon (Bottom Left)
+            myConfetti({
+                ...defaults,
+                particleCount,
+                angle: 60,
+                origin: { x: 0, y: 0.9 } // Shoot from bottom left
+            });
+
+            // 2. Right Cannon (Bottom Right)
+            myConfetti({
+                ...defaults,
+                particleCount,
+                angle: 120,
+                origin: { x: 1, y: 0.9 } // Shoot from bottom right
+            });
+        }
+    }, [isOpen, type]);
+
     if (!isOpen) return null;
 
     // Determine styles based on type
@@ -58,7 +102,7 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
                 <div className="flex flex-col items-center animate-pulse px-4 text-center">
                     <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-red-500 to-red-800 drop-shadow-[0_2px_0_rgba(139,0,0,1)] stroke-white tracking-widest uppercase">
                         TRY AGAIN
-                    </h1>
+                     </h1>
 
                     {message && (
                         <div className="mt-4 bg-white text-red-600 font-extrabold text-xl px-6 py-2 rounded-full border-2 border-red-400 shadow-[0_0_20px_rgba(255,0,0,0.4)] animate-float-up transform -rotate-1">
@@ -72,50 +116,6 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
 
     // Custom render for CELEBRATION type (LUCK) to be festive but direct
     if (type === 'celebration') {
-        const canvasRef = React.useRef(null);
-
-        // Trigger confetti on mount (Optimized Burst)
-        React.useEffect(() => {
-            if (isOpen && canvasRef.current) {
-                const myConfetti = confetti.create(canvasRef.current, {
-                    resize: true,
-                    useWorker: true
-                });
-
-                // Responsive Settings
-                const isMobile = window.innerWidth < 768;
-                const particleCount = isMobile ? 60 : 100;
-                const scalar = isMobile ? 1.2 : 1.0; // Bigger on mobile
-                const velocity = isMobile ? 60 : 80; // Shoot higher on mobile (taller screen)
-
-                const defaults = {
-                    spread: isMobile ? 50 : 70,
-                    ticks: 200,
-                    gravity: 1.2,
-                    decay: 0.92,
-                    startVelocity: velocity,
-                    colors: ['#FFD700', '#FFA500', '#DAA520', '#FFFFFF'],
-                    scalar
-                };
-
-                // 1. Left Cannon (Bottom Left)
-                myConfetti({
-                    ...defaults,
-                    particleCount,
-                    angle: 60,
-                    origin: { x: 0, y: 0.9 } // Shoot from bottom left
-                });
-
-                // 2. Right Cannon (Bottom Right)
-                myConfetti({
-                    ...defaults,
-                    particleCount,
-                    angle: 120,
-                    origin: { x: 1, y: 0.9 } // Shoot from bottom right
-                });
-            }
-        }, [isOpen]);
-
         return (
             <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none animate-bounce-in flex-col overflow-hidden">
                 <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 animate-fade-in" />

@@ -12,11 +12,14 @@
     "open:android": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^8.0.0",
     "@capacitor/android": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/preferences": "^8.0.1",
+    "@capgo/native-purchases": "^8.4.0",
     "canvas-confetti": "^1.9.4",
+    "capacitor-google-game-services": "^2.0.0",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.561.0",
     "matter-js": "^0.20.0",
@@ -29,6 +32,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
+    "canvas": "^3.2.3",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
