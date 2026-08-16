@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Footer({ phase, onSpin, onPowerUp, balls, getImage, getImmutableImage }) {
+export default function Footer({ phase, onSpin, onPowerUp, balls, getImmutableImage, footerBackgroundImage }) {
     const busy = phase === 'RESOLVE' || phase === 'GAME_OVER';
 
     // spin.png is 720x256 (ratio ~2.8:1). At flex-1 width we let it define its own height
@@ -12,9 +12,13 @@ export default function Footer({ phase, onSpin, onPowerUp, balls, getImage, getI
             className="w-full flex items-center px-2 gap-3 z-30 flex-shrink-0"
             style={{
                 height: 96,
-                backgroundImage: `url(${getImage('footerbg.png')})`,
+                backgroundImage: footerBackgroundImage
+                    ? `url(${footerBackgroundImage})`
+                    : 'linear-gradient(180deg, rgba(15, 5, 52, 0.96), rgba(5, 1, 23, 0.99))',
                 backgroundSize: '100% 100%',
-                backgroundPosition: 'center'
+                backgroundPosition: 'center',
+                borderTop: '1px solid rgba(250, 204, 21, 0.32)',
+                boxShadow: '0 -8px 24px rgba(0, 0, 0, 0.3)'
             }}
         >
 

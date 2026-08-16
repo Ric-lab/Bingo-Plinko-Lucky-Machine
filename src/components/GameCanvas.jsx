@@ -3,11 +3,6 @@ import Matter from 'matter-js';
 
 const { Engine, Render, Runner, Bodies, Body, Composite, Events, Vector } = Matter;
 
-const COLORS = {
-    peg: '#eeff00ff',
-    ball: '#ff0055ff'
-};
-
 // ============================================================================
 // PHYSICS_CONFIG — tune the gameplay feel here. All ratios scale with screen.
 // ============================================================================
@@ -24,40 +19,44 @@ const PHYSICS_CONFIG = {
     PEG_RADIUS_RATIO: 0.021,        // large pegs (even rows)
     PEG_RADIUS_SMALL_RATIO: 0.013,  // small pegs (odd rows, interleaved)
     PEG_RESTITUTION_LARGE: 0.9,     // bouncy but loses energy
-    PEG_RESTITUTION_SMALL: 1.0,     // perfect bounce (was 1.5 — amplified energy → crazy bouncing)
-    PEG_ACTIVE_FORCE: 0.05,         // extra kick on hit (creates "relevant" direction change)
+    PEG_RESTITUTION_SMALL: 1.0,     // perfect bounce
+    PEG_ACTIVE_FORCE: 0.05,         // extra kick on hit
     PEG_COLS: 7,                    // horizontal density
 
-    // --- Rows are computed dynamically — target this row-gap relative to ball ---
-    PEG_ROW_GAP_RATIO: 2.4,         // target vertical gap = this × ball diameter
-    PEG_ROWS_MIN: 10,               // short screens
-    PEG_ROWS_MAX: 16,               // tall screens
+    // --- Rows are computed dynamically ---
+    PEG_ROW_GAP_RATIO: 2.4,
+    PEG_ROWS_MIN: 10,
+    PEG_ROWS_MAX: 16,
 
     // --- Walls ---
-    WALL_RESTITUTION: 1.3,          // bouncy edges
-    WALL_KICK_X: 0.15,              // active push inward when ball touches wall
-    WALL_KICK_Y: -0.05,             // slight upward lift on wall hit
+    WALL_RESTITUTION: 1.3,
+    WALL_KICK_X: 0.15,
+    WALL_KICK_Y: -0.05,
 
     // --- World ---
     GRAVITY_Y: 1.2,
 };
 
-const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, getImage }, ref) => {
+// Canvas owns physics only. Every permanent visual is supplied as a theme asset.
+const GameCanvas = forwardRef(({
+    onBallLanded,
+    onPegHit,
+    vibrationLevel = 1,
+    backgroundImage,
+    ballImage,
+    pegImage,
+    dividerImage
+}, ref) => {
     const sceneRef = useRef(null);
     const engineRef = useRef(null);
     const renderRef = useRef(null);
-    // Track balls that have already triggered a score to prevent double-counting/crashes
     const processedBalls = useRef(new Set());
 
-    // Fix Stale Closure: Keep track of the latest callback
     const onBallLandedRef = useRef(onBallLanded);
-
-    // Audio & Visual Refs
-    // const { play: playHit } = useSound('/Audio/peg.mp3', { volume: 1.0, multi: true }); // Moved to App.jsx
     const playHitRef = useRef(onPegHit);
     const litPegs = useRef(new Map()); // Map<ID, {x, y, time}>
+    const assetsRef = useRef({ background: null, ball: null, peg: null, divider: null });
 
-    // Shake State
     const [shake, setShake] = useState(false);
 
     useEffect(() => {
@@ -65,29 +64,32 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
         playHitRef.current = onPegHit;
     }, [onBallLanded, onPegHit]);
 
+    useEffect(() => {
+        const load = (name, src) => {
+            const image = new Image();
+            image.onload = () => { assetsRef.current[name] = image; };
+            image.src = src;
+        };
+
+        load('background', backgroundImage);
+        load('ball', ballImage);
+        load('peg', pegImage);
+        load('divider', dividerImage);
+    }, [backgroundImage, ballImage, pegImage, dividerImage]);
+
     useImperativeHandle(ref, () => ({
         dropBall: (colIdx, isFireBall = false, level = 1, winStreak = 0, gameMode = 'FINGO') => {
             if (!engineRef.current || !renderRef.current) return;
 
             const width = renderRef.current.options.width;
-
-            // --- GRID LOGIC ---
-            // Buckets: 5 (Standard)
-            // const TOTAL_BINS = 5; // Unused for drop logic now
-
-            // PEG DENSITY (Decoupled from Bins)
             const pegSpacing = width / PHYSICS_CONFIG.PEG_COLS;
 
-            // FIXED DROP POINTS aligned to peg columns (1..5 of 7)
             let startX;
-
             if (isFireBall) {
-                // FIREBALL: Perfect Center of the Bin (Advantage)
                 const TOTAL_BINS = 5;
                 const binW = width / TOTAL_BINS;
                 startX = (colIdx * binW) + (binW / 2);
             } else {
-                // NORMAL BALL: Aligned to specific Peg Columns (Challenge)
                 const targetPegCol = colIdx + 1;
                 startX = (targetPegCol * pegSpacing) + (pegSpacing / 2);
             }
@@ -98,33 +100,25 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                 friction: isFireBall ? 0 : PHYSICS_CONFIG.BALL_FRICTION,
                 frictionAir: isFireBall ? 0.07 : PHYSICS_CONFIG.BALL_FRICTION_AIR,
                 density: PHYSICS_CONFIG.BALL_DENSITY,
-                render: isFireBall ? {
-                    fillStyle: '#ff4d00',
-                    strokeStyle: '#ffae00',
-                    lineWidth: 4
-                } : {
-                    sprite: {
-                        texture: getImage('ball.png'),
-                        xScale: (ballRadius * 2) / 128, // Image is now 128px
-                        yScale: (ballRadius * 2) / 128
-                    }
+                // All bodies render transparent — premium drawing is in afterRender
+                render: {
+                    fillStyle: 'rgba(0,0,0,0)',
+                    strokeStyle: 'rgba(0,0,0,0)',
+                    lineWidth: 0
                 },
                 label: isFireBall ? 'fireball' : 'player-ball',
-                isSensor: isFireBall, // FIREBALL IGNORES ALL COLLISIONS (But triggers events)
-                // Custom properties for logic
+                isSensor: isFireBall,
                 customLevel: level,
                 targetColIdx: colIdx,
                 customWinStreak: winStreak,
                 customGameMode: gameMode
             });
 
-            // Random slight x velocity (chaos) ONLY IF NOT FIREBALL — prevents straight fall
             if (!isFireBall) {
-                // Drop Chaos increases with level
                 const chaosMultiplier = Math.min(2.5, 1 + (level / 100));
                 Matter.Body.setVelocity(ball, { x: (Math.random() - 0.5) * PHYSICS_CONFIG.BALL_INITIAL_X_CHAOS * chaosMultiplier, y: 0 });
             } else {
-                Matter.Body.setVelocity(ball, { x: 0, y: 5 }); // Push it down
+                Matter.Body.setVelocity(ball, { x: 0, y: 5 });
             }
 
             Composite.add(engineRef.current.world, ball);
@@ -134,16 +128,12 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
     useEffect(() => {
         if (!sceneRef.current) return;
 
-        // CRITICAL FIX: Delay initialization to ensure layout is stable
-        // The container might be resizing (flexbox) when this runs immediately.
         const timer = setTimeout(() => {
             if (!sceneRef.current) return;
 
-            // dimensions (Check freshly)
             const width = sceneRef.current.clientWidth;
             const height = sceneRef.current.clientHeight;
 
-            // Setup Matter JS
             const engine = Engine.create();
             engine.world.gravity.y = PHYSICS_CONFIG.GRAVITY_Y;
             engineRef.current = engine;
@@ -154,36 +144,30 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                 options: {
                     width,
                     height,
-                    wireframes: false, // SHOW ACTUAL BODIES (Solids)
-                    background: 'transparent',
+                    wireframes: false,
+                    background: 'transparent', // Canvas 2D cleared each frame; afterRender draws bg
                     pixelRatio: window.devicePixelRatio
                 }
             });
             renderRef.current = render;
 
-            // Walls (Edges of the screen)
+            // Walls (invisible — pure physics boundary)
+            const wallRender = { fillStyle: 'rgba(0,0,0,0)', strokeStyle: 'rgba(0,0,0,0)', lineWidth: 0 };
             const wallThick = 60;
             const walls = [
-                Bodies.rectangle(-wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-left', friction: 0, restitution: PHYSICS_CONFIG.WALL_RESTITUTION }),
-                Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-right', friction: 0, restitution: PHYSICS_CONFIG.WALL_RESTITUTION }),
-                Bodies.rectangle(width / 2, height + 25, width, 50, { isStatic: true, label: 'floor' })
+                Bodies.rectangle(-wallThick / 2, height / 2, wallThick, height * 2,
+                    { isStatic: true, label: 'wall-left', friction: 0, restitution: PHYSICS_CONFIG.WALL_RESTITUTION, render: wallRender }),
+                Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 2,
+                    { isStatic: true, label: 'wall-right', friction: 0, restitution: PHYSICS_CONFIG.WALL_RESTITUTION, render: wallRender }),
+                Bodies.rectangle(width / 2, height + 25, width, 50,
+                    { isStatic: true, label: 'floor', render: wallRender })
             ];
             Composite.add(engine.world, walls);
 
-            // ... (rest of code)
-
-            // (Skipping to return statement for border removal)
-            // But this tool only does one contiguous block. 
-            // I will do the render change first, then the border removal in a separate call or just rely on the user seeing the ramps inside the border.
-            // Actually, I'll do two replace calls. This one is for Render options.
-
-
-            // Pegs (Aligned Grid)
+            // ── PEGS (transparent physics bodies — drawn in afterRender)
             const pegRadius = width * PHYSICS_CONFIG.PEG_RADIUS_RATIO;
             const pegRadiusSmall = width * PHYSICS_CONFIG.PEG_RADIUS_SMALL_RATIO;
 
-            // DYNAMIC ROWS — scale with screen height so vertical gap stays consistent across devices.
-            // Target gap = ball diameter × PEG_ROW_GAP_RATIO. Clamped between MIN/MAX.
             const startY = 25;
             const endY = height - 100;
             const ballDiameter = width * PHYSICS_CONFIG.BALL_RADIUS_RATIO * 2;
@@ -192,51 +176,32 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
             const rows = Math.max(PHYSICS_CONFIG.PEG_ROWS_MIN, Math.min(PHYSICS_CONFIG.PEG_ROWS_MAX, computedRows));
             const gapY = (endY - startY) / (rows - 1);
 
-            // Unit Width
             const TOTAL_BINS = 5;
             const binW = width / TOTAL_BINS;
             const PEG_COLS = PHYSICS_CONFIG.PEG_COLS;
             const pegSpacing = width / PEG_COLS;
 
+            const invisibleRender = { fillStyle: 'rgba(0,0,0,0)', strokeStyle: 'rgba(0,0,0,0)', lineWidth: 0 };
+
             for (let r = 0; r < rows; r++) {
                 const isEven = (r % 2 === 0);
-
-                // Row Logic:
-                // Grid driven by PEG_COLS (7), not BINS (5).
-
                 if (isEven) {
-                    // EDGE ALIGNED (0 to PEG_COLS)
                     for (let c = 0; c <= PEG_COLS; c++) {
                         const px = c * pegSpacing;
-
                         const peg = Bodies.circle(px, startY + (r * gapY), pegRadius, {
                             isStatic: true,
-                            render: {
-                                sprite: {
-                                    texture: getImage('peg.png'),
-                                    xScale: (pegRadius * 2) / 64, // Assume 64px image
-                                    yScale: (pegRadius * 2) / 64
-                                }
-                            },
+                            render: invisibleRender,
                             restitution: PHYSICS_CONFIG.PEG_RESTITUTION_LARGE,
                             label: 'peg'
                         });
                         Composite.add(engine.world, peg);
                     }
                 } else {
-                    // CENTER ALIGNED
                     for (let c = 0; c < PEG_COLS; c++) {
                         const px = (c * pegSpacing) + (pegSpacing / 2);
-
                         const peg = Bodies.circle(px, startY + (r * gapY), pegRadiusSmall, {
                             isStatic: true,
-                            render: {
-                                sprite: {
-                                    texture: getImage('peg.png'),
-                                    xScale: (pegRadiusSmall * 2) / 64,
-                                    yScale: (pegRadiusSmall * 2) / 64
-                                }
-                            },
+                            render: invisibleRender,
                             restitution: PHYSICS_CONFIG.PEG_RESTITUTION_SMALL,
                             label: 'peg'
                         });
@@ -245,79 +210,44 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                 }
             }
 
-            // Physical Separators & Sensors
-            // These must MATCH THE VISUAL BUCKETS (5 Cols)
+            // ── DIVIDERS / Funnels (transparent physics — drawn in afterRender)
+            const funnelHeight = 90;
+            const funnelRender = { fillStyle: 'rgba(0,0,0,0)', strokeStyle: 'rgba(0,0,0,0)', lineWidth: 0 };
 
             for (let i = 0; i < TOTAL_BINS; i++) {
-                // i = 0..4
-                const x = i * binW; // Left edge of this bin
-
-                // Separators (Walls/Funnels between columns)
-                // NOW INCLUDING EDGES (i=0 to 5) to handle "side gaps"
-                // We want funnels at: 0*W (Left), 1*W, 2*W, 3*W, 4*W, 5*W (Right)
-                // But the loop is 0..4 (5 cols).
-                // We can add the Left funnel on i=0. The Right funnel triggers on i=4 (at x+binW).
-
-                const funnelHeight = 90; // Normalized height
-
+                const x = i * binW;
                 const internalOptions = {
                     isStatic: true,
                     friction: 0,
                     frictionStatic: 0,
-                    render: {
-                        sprite: {
-                            texture: getImage('triangle.png'),
-                            xScale: 40 / 80, // Target 40px width. Adjust if image is not 80px.
-                            yScale: 90 / 180 // Target 90px height. Adjust if image is not 180px.
-                        }
-                    },
+                    render: funnelRender,
                     label: 'funnel-internal',
-                    restitution: 0.5 // Bouncy tip
+                    restitution: 0.5
                 };
 
-
-
-                // 1. Funnel on the LEFT of the current bin (at x)
-                // This covers:
-                // i=0: Left Wall (x=0)
-                // i=1..4: Internal Dividers
                 Composite.add(engine.world, Bodies.trapezoid(x, height - 20, 40, funnelHeight, 1, internalOptions));
-
-                // 2. Funnel on the RIGHT of the LAST bin (at x + binW)
-                // This covers: Right Wall (x=width)
                 if (i === 4) {
                     Composite.add(engine.world, Bodies.trapezoid(x + binW, height - 20, 40, funnelHeight, 1, internalOptions));
                 }
 
-                // (Ramp logic removed - replaced by Trapezoids above)
-
-                // Sensor (The Trigger) - LARGE CATCHER
-                // Position: Centered lower to ensure capture.
-                // extending from roughly the bottom of the visible pipe down.
+                // Sensor (score trigger)
                 const pipeX = x + binW / 2;
-                const sensorHeight = 10; // Thin sensor at the very bottom
-                const sensorY = height - 20; // Trigger slightly earlier (was -5)
-
-                // CRITICAL FIX: Make Sensor FULL WIDTH of the bin
-                // Using binW + 2 to slight overlap
+                const sensorHeight = 10;
+                const sensorY = height - 20;
                 const sensor = Bodies.rectangle(pipeX, sensorY, binW + 2, sensorHeight, {
                     isStatic: true,
-                    isSensor: true, // Specific trigger
-                    label: `bin-${i}`, // Encodes the Index: 0, 1, 2, 3, 4
-                    render: {
-                        visible: false, // Debug: set true to see sensor
-                        fillStyle: 'red' // visible for debug
-                    }
+                    isSensor: true,
+                    label: `bin-${i}`,
+                    render: { visible: false, fillStyle: 'rgba(255,0,0,0)' }
                 });
                 Composite.add(engine.world, sensor);
             }
 
-            // Collision Event
+            // ── COLLISION EVENTS
             Events.on(engine, 'collisionStart', (evt) => {
                 evt.pairs.forEach(pair => {
                     const { bodyA, bodyB } = pair;
 
-                    // Identify ball and sensor
                     let ball = null;
                     let sensor = null;
 
@@ -330,264 +260,215 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                     const isFloor = bodyA.label === 'floor' || bodyB.label === 'floor';
                     const peg = (bodyA.label === 'peg' ? bodyA : (bodyB.label === 'peg' ? bodyB : null));
 
-                    // Explicitly IGNORE separators/funnels for sound
                     const isFunnel = bodyA.label.includes('funnel') || bodyB.label.includes('funnel');
                     if (isFunnel) return;
 
-                    // ACTIVE BUMPER LOGIC — kick along the normal for "relevant" direction change
+                    // Active bumper kick
                     if (ball && peg) {
                         const normal = Vector.normalise(Vector.sub(ball.position, peg.position));
                         let force = Vector.mult(normal, PHYSICS_CONFIG.PEG_ACTIVE_FORCE);
 
-                        // ANTI-VICTORY VECTOR (Near-Miss Illusion)
-                        // Ativo desde o nível 1. Força constante (não progressiva) para desviar inteligentemente a bola.
+                        // Anti-victory vector (near-miss illusion)
                         if (ball.customLevel > 0 && ball.label !== 'fireball') {
-                            const width = renderRef.current.options.width;
-                            const binW = width / 5;
-                            const targetCenter = (ball.targetColIdx * binW) + (binW / 2);
-
-                            // If the ball is still somewhat above the target column, apply a subtle lateral push OUTWARDS
-                            if (Math.abs(ball.position.x - targetCenter) < binW) {
+                            const w = renderRef.current.options.width;
+                            const bW = w / 5;
+                            const targetCenter = (ball.targetColIdx * bW) + (bW / 2);
+                            if (Math.abs(ball.position.x - targetCenter) < bW) {
                                 const pushDir = ball.position.x > targetCenter ? 1 : -1;
-
-                                // Força base dependendo do modo
                                 let vectorForce = ball.customGameMode === 'SPINGO' ? 0.02 : 0.01;
-
-                                // Trapaça Descarada: Impede a 4ª vitória consecutiva
                                 if (ball.customWinStreak >= 3) {
                                     vectorForce = ball.customGameMode === 'SPINGO' ? 0.06 : 0.03;
                                 }
-
                                 force.x += pushDir * vectorForce;
                             }
                         }
 
                         Body.applyForce(ball, ball.position, force);
 
-                        // --- FEEDBACK SECTION ---
-                        // 1. Audio
-                        // FIREBALL IS SILENT (For now)
-                        if (playHitRef.current && ball.label !== 'fireball') {
-                            playHitRef.current();
-                        }
-
-                        // 2. Haptic
+                        if (playHitRef.current && ball.label !== 'fireball') playHitRef.current();
                         if (vibrationLevel > 0 && navigator.vibrate) navigator.vibrate(15 * vibrationLevel);
 
-                        // 3. Visual (Light Up)
-                        // Save the peg position and time to the map
-                        litPegs.current.set(peg.id, {
-                            x: peg.position.x,
-                            y: peg.position.y,
-                            time: Date.now()
-                        });
+                        // Light up the peg (visual feedback in afterRender)
+                        litPegs.current.set(peg.id, { x: peg.position.x, y: peg.position.y, time: Date.now() });
                     }
 
-                    // ACTIVE WALL KICK (Keep it in the center!)
+                    // Wall kick
                     if (ball) {
-                        const hitLeft = (bodyA.label === 'wall-left' || bodyB.label === 'wall-left');
+                        const hitLeft  = (bodyA.label === 'wall-left'  || bodyB.label === 'wall-left');
                         const hitRight = (bodyA.label === 'wall-right' || bodyB.label === 'wall-right');
-
-                        if (hitLeft) {
-                            Body.applyForce(ball, ball.position, { x: PHYSICS_CONFIG.WALL_KICK_X, y: PHYSICS_CONFIG.WALL_KICK_Y });
-                        } else if (hitRight) {
-                            Body.applyForce(ball, ball.position, { x: -PHYSICS_CONFIG.WALL_KICK_X, y: PHYSICS_CONFIG.WALL_KICK_Y });
-                        }
+                        if (hitLeft)  Body.applyForce(ball, ball.position, { x:  PHYSICS_CONFIG.WALL_KICK_X, y: PHYSICS_CONFIG.WALL_KICK_Y });
+                        if (hitRight) Body.applyForce(ball, ball.position, { x: -PHYSICS_CONFIG.WALL_KICK_X, y: PHYSICS_CONFIG.WALL_KICK_Y });
                     }
 
-                    // VALID COLLISION LOGIC
+                    // Bin landing
                     if (ball && sensor) {
-                        // 1. CRITICAL: Check Duplicate Logic
-                        if (processedBalls.current.has(ball.id)) {
-                            return; // Already processed this ball. IGNORE.
-                        }
-
-                        // 2. Mark as processed immediately
+                        if (processedBalls.current.has(ball.id)) return;
                         processedBalls.current.add(ball.id);
-
-                        // 3. Extract Index
                         const binIdx = parseInt(sensor.label.split('-')[1]);
-
-                        // 4. Trigger Game Logic (Use Ref to get latest state)
-                        if (onBallLandedRef.current) {
-                            onBallLandedRef.current(binIdx, ball.label === 'fireball');
-                        }
-
-                        // --- FIREBALL IMPACT EFFECT ---
+                        if (onBallLandedRef.current) onBallLandedRef.current(binIdx, ball.label === 'fireball');
                         if (ball.label === 'fireball') {
-                            // 1. Heavy Vibrate
-                            if (vibrationLevel > 0 && navigator.vibrate) {
-                                navigator.vibrate([100 * vibrationLevel, 50 * vibrationLevel, 100 * vibrationLevel]); // Scaled vibration
-                            }
-                            // 2. Trigger Shake
+                            if (vibrationLevel > 0 && navigator.vibrate) navigator.vibrate([100 * vibrationLevel, 50 * vibrationLevel, 100 * vibrationLevel]);
                             setShake(true);
-                            setTimeout(() => setShake(false), 500); // Reset after anim
+                            setTimeout(() => setShake(false), 500);
                         }
-
-                        // 5. DELAYED REMOVAL (Let user see it land)
-                        setTimeout(() => {
-                            Composite.remove(engine.world, ball);
-                        }, 1000); // 2.0s delay (User requested longer time)
+                        setTimeout(() => { Composite.remove(engine.world, ball); }, 1000);
                     } else if (ball && isFloor) {
-                        // FEEDBACK: Play sound/haptics on floor hit (ONCE)
                         if (!ball.hasHitFloor) {
-                            // FIREBALL IS SILENT
-                            if (playHitRef.current && ball.label !== 'fireball') {
-                                playHitRef.current();
-                            }
+                            if (playHitRef.current && ball.label !== 'fireball') playHitRef.current();
                             if (vibrationLevel > 0 && navigator.vibrate) navigator.vibrate(10 * vibrationLevel);
                             ball.hasHitFloor = true;
                         }
-
-                        // Cleanup on floor hit (ONLY if missed sensor)
-                        // If it hit the sensor, it's in processedBalls, so we let the timeout handle it.
-                        if (!processedBalls.current.has(ball.id)) {
-                            Composite.remove(engine.world, ball);
-                        }
+                        if (!processedBalls.current.has(ball.id)) Composite.remove(engine.world, ball);
                     }
-
                 });
             });
 
-            // --- ADVANCED PARTICLE SYSTEM FOR FIREBALLS (COMET) ---
+            // ── FIREBALL PARTICLE SYSTEM
             const particles = [];
 
-            // Helper to add particles
             const emitParticles = (x, y) => {
-                // 1. Core Fire (Intense, Fast)
+                // Core fire
                 for (let i = 0; i < 5; i++) {
                     particles.push({
                         x: x + (Math.random() - 0.5) * 10,
                         y: y + (Math.random() - 0.5) * 10,
                         vx: (Math.random() - 0.5) * 2,
-                        vy: (Math.random() * -3) - 1, // Upward bias relative to ball (which falls down, effectively trail stays behind)
-                        life: 1.0,
-                        decay: 0.05 + Math.random() * 0.05,
-                        size: 6 + Math.random() * 6,
-                        color: '255, 100, 0', // OrangeBase
-                        type: 'core'
+                        vy: (Math.random() * -3) - 1,
+                        life: 1.0, decay: 0.05 + Math.random() * 0.05,
+                        size: 6 + Math.random() * 6, type: 'core'
                     });
                 }
-
-                // 2. Sparks (Wide spread, long life)
+                // Sparks
                 for (let i = 0; i < 3; i++) {
                     particles.push({
-                        x: x,
-                        y: y,
+                        x, y,
                         vx: (Math.random() - 0.5) * 10,
                         vy: (Math.random() - 0.5) * 10,
-                        life: 1.0,
-                        decay: 0.02 + Math.random() * 0.02,
-                        size: 2 + Math.random() * 2,
-                        color: '255, 255, 0', // Yellow
-                        type: 'spark'
+                        life: 1.0, decay: 0.02 + Math.random() * 0.02,
+                        size: 2 + Math.random() * 2, type: 'spark'
                     });
                 }
-
-                // 3. Smoke (Rising, Dark)
+                // Smoke
                 if (Math.random() > 0.5) {
                     particles.push({
-                        x: x + (Math.random() - 0.5) * 20,
-                        y: y,
-                        vx: (Math.random() - 0.5) * 2,
-                        vy: -2 - Math.random(), // Floats up
-                        life: 1.0,
-                        decay: 0.015,
-                        size: 10 + Math.random() * 10,
-                        color: '50, 50, 50', // Gray
-                        type: 'smoke'
+                        x: x + (Math.random() - 0.5) * 20, y,
+                        vx: (Math.random() - 0.5) * 2, vy: -2 - Math.random(),
+                        life: 1.0, decay: 0.015,
+                        size: 10 + Math.random() * 10, type: 'smoke'
                     });
                 }
             };
 
+            // ── AFTER RENDER — asset-driven visual pipeline
+            // Order: background → dividers → pegs → balls → particles
+            const GLOW_DURATION = 380;
+
             Events.on(render, 'afterRender', () => {
                 const ctx = render.context;
                 const bodies = Composite.allBodies(engine.world);
-
-                // 1. EMIT from active fireballs
-                bodies.forEach(body => {
-                    if (body.label === 'fireball') {
-                        emitParticles(body.position.x, body.position.y);
-
-                        // Draw Glowing Head
-                        const x = body.position.x;
-                        const y = body.position.y;
-
-                        // Intense Core Glow
-                        const gradient = ctx.createRadialGradient(x, y, 5, x, y, 40);
-                        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-                        gradient.addColorStop(0.2, 'rgba(255, 200, 0, 0.8)');
-                        gradient.addColorStop(0.5, 'rgba(255, 69, 0, 0.4)');
-                        gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
-
-                        ctx.globalCompositeOperation = 'screen'; // Additive blending for glow
-                        ctx.fillStyle = gradient;
-                        ctx.beginPath();
-                        ctx.arc(x, y, 45, 0, 2 * Math.PI);
-                        ctx.fill();
-                        ctx.globalCompositeOperation = 'source-over'; // Reset
-                    }
-                });
-
-                // 2. DRAW LIT PEGS (Visual Feedback)
+                const w = render.options.width;
+                const h = render.options.height;
                 const now = Date.now();
-                const GLOW_DURATION = 350; // slightly longer fade
 
-                litPegs.current.forEach((data, id) => {
-                    const elapsed = now - data.time;
-                    if (elapsed > GLOW_DURATION) {
-                        litPegs.current.delete(id);
-                        return;
+                const assets = assetsRef.current;
+                const drawCentered = (image, x, y, width, height, alpha = 1) => {
+                    if (!image?.complete || !image.naturalWidth) return;
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+                    ctx.drawImage(image, x - width / 2, y - height / 2, width, height);
+                    ctx.restore();
+                };
+
+                // Background is a single theme image, not a hard-coded canvas gradient.
+                if (assets.background?.complete && assets.background.naturalWidth) {
+                    ctx.drawImage(assets.background, 0, 0, w, h);
+                }
+
+                // ────────────────────────────────────────────────────────────
+                // LAYER 1 — Gem Dividers (below pegs and ball)
+                // ────────────────────────────────────────────────────────────
+                bodies.forEach(body => {
+                    if (body.label === 'funnel-internal') {
+                        const minX = Math.min(...body.vertices.map(vertex => vertex.x));
+                        const maxX = Math.max(...body.vertices.map(vertex => vertex.x));
+                        const minY = Math.min(...body.vertices.map(vertex => vertex.y));
+                        const maxY = Math.max(...body.vertices.map(vertex => vertex.y));
+                        drawCentered(assets.divider, (minX + maxX) / 2, (minY + maxY) / 2, maxX - minX + 20, maxY - minY + 20);
                     }
-
-                    // Ease out cubic for smoother fade
-                    const t = elapsed / GLOW_DURATION;
-                    const alpha = 1 - t; // Linear fade is fine for subtle effects
-
-                    // Draw Glow - Soft & Subtle
-                    // Using 'source-over' instead of 'screen' for less "burning" white intensity
-                    ctx.globalCompositeOperation = 'source-over';
-
-                    ctx.beginPath();
-                    // Match peg size roughly (approx 12-15px depending on screen)
-                    // We just add a small rim
-                    ctx.arc(data.x, data.y, 16, 0, 2 * Math.PI);
-
-                    // Softer Gold/Orange, low opacity
-                    ctx.fillStyle = `rgba(255, 200, 50, ${alpha * 0.5})`;
-                    ctx.fill();
-
-                    // No inner white core - keeps it flat and subtle
                 });
 
-                // 2. UPDATE & DRAW Particles
+                // ────────────────────────────────────────────────────────────
+                // LAYER 2 — Gold Pegs (with hit-glow state)
+                // ────────────────────────────────────────────────────────────
+                bodies.forEach(body => {
+                    if (body.label !== 'peg') return;
+
+                    const litData = litPegs.current.get(body.id);
+                    let isLit = false;
+                    let litAlpha = 0;
+
+                    if (litData) {
+                        const elapsed = now - litData.time;
+                        if (elapsed < GLOW_DURATION) {
+                            isLit = true;
+                            litAlpha = 1 - (elapsed / GLOW_DURATION); // linear fade out
+                        } else {
+                            litPegs.current.delete(body.id);
+                        }
+                    }
+
+                    const visualDiameter = body.circleRadius * 4;
+                    drawCentered(assets.peg, body.position.x, body.position.y, visualDiameter, visualDiameter, isLit ? 1 : 0.9);
+                });
+
+                // Player balls use the active theme sprite.
+                bodies.forEach(body => {
+                    if (body.label !== 'player-ball' && body.label !== 'fireball') return;
+                    const visualDiameter = body.circleRadius * 2.8;
+                    drawCentered(assets.ball, body.position.x, body.position.y, visualDiameter, visualDiameter);
+                });
+
+                // Fireball keeps particle feedback, but its body remains the ball asset.
+                bodies.forEach(body => {
+                    if (body.label !== 'fireball') return;
+
+                    emitParticles(body.position.x, body.position.y);
+
+                    const fx = body.position.x;
+                    const fy = body.position.y;
+                    const gradient = ctx.createRadialGradient(fx, fy, 5, fx, fy, 45);
+                    gradient.addColorStop(0,   'rgba(255,255,255,1)');
+                    gradient.addColorStop(0.2, 'rgba(255,200,0,0.8)');
+                    gradient.addColorStop(0.5, 'rgba(255,69,0,0.4)');
+                    gradient.addColorStop(1,   'rgba(255,0,0,0)');
+                    ctx.globalCompositeOperation = 'screen';
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(fx, fy, 45, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.globalCompositeOperation = 'source-over';
+                });
+
+                // ────────────────────────────────────────────────────────────
+                // LAYER 5 — Particle trail (fireball comet tail)
+                // ────────────────────────────────────────────────────────────
                 for (let i = particles.length - 1; i >= 0; i--) {
                     const p = particles[i];
                     p.x += p.vx;
                     p.y += p.vy;
                     p.life -= p.decay;
-
-                    if (p.life <= 0) {
-                        particles.splice(i, 1);
-                        continue;
-                    }
+                    if (p.life <= 0) { particles.splice(i, 1); continue; }
 
                     ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI);
-
-                    // Dynamic colors based on life/type
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                     if (p.type === 'core') {
-                        // Fade from Yellow to Red
-                        const red = 255;
-                        const green = Math.floor(255 * p.life); // 255 -> 0
-                        const blue = 0;
-                        ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${p.life})`;
+                        const green = Math.floor(255 * p.life);
+                        ctx.fillStyle = `rgba(255,${green},0,${p.life})`;
                     } else if (p.type === 'spark') {
-                        ctx.fillStyle = `rgba(255, 255, 200, ${p.life})`;
+                        ctx.fillStyle = `rgba(255,255,200,${p.life})`;
                     } else if (p.type === 'smoke') {
-                        ctx.fillStyle = `rgba(50, 50, 50, ${p.life * 0.5})`;
+                        ctx.fillStyle = `rgba(50,50,50,${p.life * 0.5})`;
                     }
-
                     ctx.fill();
                 }
             });
@@ -595,9 +476,8 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
             Runner.run(Runner.create(), engine);
             Render.run(render);
 
-        }, 100); // 100ms delay for layout stability
+        }, 100);
 
-        // Cleanup
         return () => {
             clearTimeout(timer);
             if (renderRef.current) {

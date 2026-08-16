@@ -80,6 +80,8 @@ export default function App() {
     unlockSkin,
     syncThemeState,
     getImage,
+    getBackgroundImage,
+    getFooterBackgroundImage,
     getImmutableImage,
     getSound,
     getImmutableSound
@@ -386,7 +388,7 @@ export default function App() {
     <div
       className="w-full h-[100dvh] flex flex-col relative overflow-hidden md:max-w-md mx-auto shadow-2xl md:border-x-2 border-gray-200 font-sans select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       style={{
-        backgroundImage: `url(${getImage('Background.jpg')})`,
+        backgroundImage: `url(${getBackgroundImage()})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center'
       }}
@@ -491,7 +493,10 @@ export default function App() {
             onBallLanded={handleBallLanded}
             onPegHit={playPeg}
             vibrationLevel={audioSettings.vibration}
-            getImage={getImage}
+            backgroundImage={getBackgroundImage()}
+            ballImage={getImage('ball.png')}
+            pegImage={getImage('peg.png')}
+            dividerImage={getImage('triangle.png')}
             getImmutableImage={getImmutableImage}
             key={currentSkin} // Force re-mount on skin change
           />
@@ -528,6 +533,7 @@ export default function App() {
           }}
           getImage={getImage}
           getImmutableImage={getImmutableImage}
+          footerBackgroundImage={getFooterBackgroundImage()}
         />
       </div>
 

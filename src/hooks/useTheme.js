@@ -44,6 +44,18 @@ export function useTheme() {
     };
 
     const getImage = (filename) => `/Images/${encodeURIComponent(currentSkin)}/${filename}`;
+    // The new default theme ships its scene as PNG, while the legacy themes
+    // use JPG. Keep that format detail here so UI components never point to a
+    // missing asset.
+    const getBackgroundImage = () => currentSkin === 'Normal'
+        ? getImage('Background.png')
+        : getImage('Background.jpg');
+
+    // Only Beach currently has a bespoke footer texture. Other skins use the
+    // premium CSS fallback instead of requesting a file that does not exist.
+    const getFooterBackgroundImage = () => currentSkin === 'Beach'
+        ? getImage('footerbg.png')
+        : null;
     const getImmutableImage = (filename) => `/Images/Immutable/${filename}`;
     
     // Fallback to Immutable audio since custom audio folders don't exist yet
@@ -63,6 +75,8 @@ export function useTheme() {
         unlockSkin,
         syncThemeState,
         getImage,
+        getBackgroundImage,
+        getFooterBackgroundImage,
         getImmutableImage,
         getSound,
         getImmutableSound,

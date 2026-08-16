@@ -195,11 +195,9 @@ export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, 
                 let bodyClasses = '';
 
                 if (showGold) {
-                    // Golden Text only (box is invisible)
                     rimClasses = 'opacity-0';
                     bodyClasses = 'bg-transparent text-yellow-300 font-black drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] scale-110 z-10';
                 } else {
-                    // Normal Text only (box is invisible)
                     rimClasses = 'opacity-0';
                     bodyClasses = 'bg-transparent text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]';
                 }
