@@ -17,7 +17,6 @@ import MessageModal from './components/Modal/MessageModal';
 import GameOverModal from './components/Modal/GameOverModal';
 import NextLevelModal from './components/Modal/NextLevelModal';
 import FireballModal from './components/Modal/FireballModal';
-import ShopModal from './components/Modal/ShopModal';
 import LuckySpin from './components/LuckySpin';
 
 export default function App() {
@@ -54,10 +53,6 @@ export default function App() {
   } = useGameLogic(gameMode);
 
   const {
-    currentSkin,
-    setCurrentSkin,
-    ownedSkins,
-    unlockSkin,
     getImage,
     getImmutableImage,
     getSound,
@@ -139,15 +134,7 @@ export default function App() {
 
   const [showMagicModal, setShowMagicModal] = useState(false);
   const [showFireballConfirm, setShowFireballConfirm] = useState(false);
-  const [showShopModal, setShowShopModal] = useState(false);
-  const [shopTab, setShopTab] = useState('coins');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const openShop = (tab = 'coins') => {
-    playClick();
-    setShopTab(tab);
-    setShowShopModal(true);
-  };
 
   // Helper to show modal
   const showMessage = (type, title, message, autoCloseDuration = 0) => {
@@ -283,8 +270,6 @@ export default function App() {
       <Header
         level={level}
         coins={coins}
-        onOpenShop={() => openShop('coins')}
-        onOpenThemes={() => openShop('skins')}
         onOpenMenu={() => {
           playClick();
           setIsMenuOpen(true);
@@ -321,7 +306,6 @@ export default function App() {
             onPegHit={playPeg}
             vibrationLevel={audioSettings.vibration}
             getImage={getImage}
-            key={currentSkin} // Force re-mount on skin change
           />
         </div>
 
@@ -366,7 +350,6 @@ export default function App() {
         showMessage={showMessage}
         bingoCard={bingoCard}
         playClick={playClick}
-        onOpenShop={() => openShop('coins')}
       />
 
       <FireballModal
@@ -376,7 +359,6 @@ export default function App() {
         buyItem={buyItem}
         showMessage={showMessage}
         playClick={playClick}
-        onOpenShop={() => openShop('coins')}
       />
 
       <MessageModal
@@ -408,19 +390,6 @@ export default function App() {
         )
       )}
 
-      {/* Shop Modal */}
-      <ShopModal
-        isOpen={showShopModal}
-        onClose={() => setShowShopModal(false)}
-        buyItem={buyItem}
-        playClick={playClick}
-        coins={coins}
-        currentSkin={currentSkin}
-        setCurrentSkin={setCurrentSkin}
-        ownedSkins={ownedSkins}
-        unlockSkin={unlockSkin}
-        initialTab={shopTab}
-      />
       {/* Lucky Wheel Bonus Phase */}
       {phase === 'BONUS_WHEEL' && (
         <LuckySpin

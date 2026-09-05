@@ -9,8 +9,7 @@ export default function MagicNumberModal({
     onMagicSpin,  // Callback when a number is successfully chosen (paid or free)
     showMessage,  // For feedback
     bingoCard,
-    playClick,
-    onOpenShop
+    playClick
 }) {
     const [selectedId, setSelectedId] = useState(null);
     const [showReward, setShowReward] = useState(false); // New state
@@ -38,8 +37,7 @@ export default function MagicNumberModal({
                 onMagicSpin(selectedNumber, COST);
                 onClose();
             } else {
-                onClose();
-                if (onOpenShop) onOpenShop();
+                showMessage('error', 'Oops!', 'Not enough coins!');
             }
         }
     };
