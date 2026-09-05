@@ -3,10 +3,6 @@ import Matter from 'matter-js';
 
 const { Engine, Render, Runner, Bodies, Body, Composite, Events, Vector } = Matter;
 
-const COLORS = {
-    peg: '#eeff00ff',
-    ball: '#ff0055ff'
-};
 
 // ============================================================================
 // PHYSICS_CONFIG — tune the gameplay feel here. All ratios scale with screen.
@@ -162,14 +158,6 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                 Bodies.rectangle(width / 2, height + 25, width, 50, { isStatic: true, label: 'floor' })
             ];
             Composite.add(engine.world, walls);
-
-            // ... (rest of code)
-
-            // (Skipping to return statement for border removal)
-            // But this tool only does one contiguous block. 
-            // I will do the render change first, then the border removal in a separate call or just rely on the user seeing the ramps inside the border.
-            // Actually, I'll do two replace calls. This one is for Render options.
-
 
             // Pegs (Aligned Grid)
             const pegRadius = width * PHYSICS_CONFIG.PEG_RADIUS_RATIO;
