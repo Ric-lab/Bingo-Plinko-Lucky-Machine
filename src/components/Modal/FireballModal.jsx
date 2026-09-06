@@ -8,6 +8,8 @@ export default function FireballModal({
     onClose,
     coins,
     buyItem,
+    watchReward,
+    adsAvailable,
     showMessage,
     playClick
 }) {
@@ -28,17 +30,9 @@ export default function FireballModal({
         }
     };
 
-    const handleWatchVideo = () => {
+    const handleWatchVideo = async () => {
         playClick?.();
-        // Simulated Ad Logic
-        showMessage('info', 'Watching Ad...', 'Please wait 2 seconds...', 2000);
-
-        setTimeout(() => {
-            // Grant reward for free
-            buyItem('fireball', 0);
-            // Always show reward modal after video
-            setShowReward(true);
-        }, 2500);
+        if (await watchReward('fireball')) setShowReward(true);
     };
 
     const handleCloseReward = () => {
@@ -72,7 +66,7 @@ export default function FireballModal({
             Icon={Flame}
             showCancel={false}
             secondaryLabel="Watch Video 📺"
-            secondaryAction={handleWatchVideo}
+            secondaryAction={adsAvailable ? handleWatchVideo : null}
         />
     );
 }

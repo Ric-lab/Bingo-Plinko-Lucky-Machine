@@ -18,8 +18,13 @@ import GameOverModal from './components/Modal/GameOverModal';
 import NextLevelModal from './components/Modal/NextLevelModal';
 import FireballModal from './components/Modal/FireballModal';
 import LuckySpin from './components/LuckySpin';
+import CloudBackup from './components/CloudBackup';
+import { useRewardedAd } from './hooks/useRewardedAd';
+import { adsAvailable } from './services/rewardedAds';
 
 export default function App() {
+  const { busy: adBusy, watch } = useRewardedAd();
+  const [canvasGeneration, setCanvasGeneration] = useState(0);
   const [audioSettings, setAudioSettings] = useState({
     music: 1, // 0: Off, 0.5: Low, 1: High
     sfx: 1,
@@ -48,8 +53,8 @@ export default function App() {
   const [gameMode, setGameMode] = useState('FINGO');
 
   const {
-    state: { coins, balls, level, bingoCard, slotsResult, winState, winReward, phase, fireBallActive, magicActive, luckySpinReward },
-    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, claimLuckySpinReward, completeLuckySpin }
+    state: { coins, balls, level, levels, isReady, bingoCard, slotsResult, winState, winReward, phase, fireBallActive, magicActive, luckySpinReward },
+    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, claimLuckySpinReward, completeLuckySpin, restoreProgress }
   } = useGameLogic(gameMode);
 
   // Target columns that have useful (unmarked matching) numbers or magic mode active
@@ -74,7 +79,7 @@ export default function App() {
   } = useTheme();
 
   // Audio: ducks BGM to 90% during Lucky Spin so the wheel ticker stays audible.
-  const baseBgmVolume = 0.3 * audioSettings.music;
+  const baseBgmVolume = adBusy ? 0 : 0.3 * audioSettings.music;
   const bgmVolume = phase === 'BONUS_WHEEL' ? baseBgmVolume * 0.9 : baseBgmVolume;
 
   const { play: playTheme, stop: stopTheme } = useSound(getImmutableSound('Theme.mp3'), { volume: baseBgmVolume, loop: true });
@@ -173,6 +178,21 @@ export default function App() {
   const closeMessage = () => {
     setMessageModal(prev => ({ ...prev, isOpen: false }));
   };
+  const watchReward = async (item, number = null) => {
+    if (!isReady || !gameStarted) return false;
+    if (item === 'continue' ? phase !== 'GAME_OVER' : !['SPIN', 'DROP'].includes(phase)) return false;
+    try {
+      const granted = await watch(() => {
+        if (item === 'magic') return startSpin(number);
+        return buyItem(item, 0);
+      });
+      if (!granted) showMessage('info', 'Sem recompensa', 'Conclua o vídeo para receber a recompensa.');
+      return granted;
+    } catch {
+      showMessage('info', 'Anúncio indisponível', 'Tente novamente mais tarde. Nenhuma moeda foi cobrada.');
+      return false;
+    }
+  };
   const canvasRef = useRef();
 
   const handleSlotClick = (colIndex) => {
@@ -254,6 +274,9 @@ export default function App() {
           />
 
           {/* Game Mode Buttons */}
+          <button onClick={() => setIsMenuOpen(true)} className="absolute top-4 right-4 z-10 rounded-full bg-white/90 text-gray-900 px-4 py-2 text-sm font-semibold">
+            Progresso e ajustes
+          </button>
           <div className="relative z-10 flex flex-col gap-6 items-center mt-[40vh]">
             {/* Bingo (New Mode) */}
             <button
@@ -326,7 +349,15 @@ export default function App() {
         }}
         settings={audioSettings}
         onUpdateSettings={setAudioSettings}
-      />
+      >
+        <CloudBackup progress={isReady ? { coins, levels } : null}
+          canRestore={isReady && !gameStarted && !adBusy}
+          onRestore={progress => {
+            if (gameStarted || !isReady || adBusy) throw new Error('Volte ao início para restaurar.');
+            restoreProgress(progress);
+            setCanvasGeneration(value => value + 1);
+          }} />
+      </SideMenu>
 
       {/* Bingo Card (Compact: 85% width) */}
       <div className="flex-shrink-0 w-full flex justify-center pb-0 bg-white/10 backdrop-blur-md z-10 border-b border-white/20">
@@ -343,6 +374,7 @@ export default function App() {
       <div className="flex-1 w-full relative bg-transparent overflow-hidden shadow-inner mt-[10px]">
         <div className="absolute inset-0">
           <GameCanvas
+            key={canvasGeneration}
             ref={canvasRef}
             onBallLanded={handleBallLanded}
             onPegHit={playPeg}
@@ -386,6 +418,8 @@ export default function App() {
       </div>
 
       <MagicNumberModal
+        watchReward={watchReward}
+        adsAvailable={adsAvailable}
         isOpen={showMagicModal}
         onClose={() => setShowMagicModal(false)}
         coins={coins}
@@ -396,6 +430,8 @@ export default function App() {
       />
 
       <FireballModal
+        watchReward={watchReward}
+        adsAvailable={adsAvailable}
         isOpen={showFireballConfirm}
         onClose={() => setShowFireballConfirm(false)}
         coins={coins}
@@ -425,6 +461,8 @@ export default function App() {
           />
         ) : (
           <GameOverModal
+            watchReward={watchReward}
+            adsAvailable={adsAvailable}
             coins={coins}
             onRestart={initLevel}
             buyItem={buyItem}
@@ -444,6 +482,8 @@ export default function App() {
           playTicker={playPalheta}
         />
       )}
+      {adBusy && <div className="absolute inset-0 z-[200] bg-black/80 text-white flex items-center justify-center" role="status">Aguarde o anúncio…</div>}
+      {!isReady && <div className="absolute inset-0 z-[200] bg-black/80 text-white flex items-center justify-center" role="status">Carregando progresso…</div>}
     </div>
   );
 }
