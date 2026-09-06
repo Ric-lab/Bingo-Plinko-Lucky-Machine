@@ -317,6 +317,10 @@ export function useGameLogic(gameMode = 'FINGO') {
         }));
     };
 
+    const triggerLuckySpin = () => {
+        setPhase('BONUS_WHEEL');
+    };
+
     const startSpin = (magicNumberOverride = null) => {
         if (phase !== 'SPIN' && !(phase === 'DROP' && magicNumberOverride !== null)) return false;
 
@@ -507,7 +511,8 @@ export function useGameLogic(gameMode = 'FINGO') {
             nextLevel,
             spinLuckySpin,
             claimLuckySpinReward,
-            completeLuckySpin
+            completeLuckySpin,
+            triggerLuckySpin
         }
     };
 }
