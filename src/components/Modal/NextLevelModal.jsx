@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 
 export default function NextLevelModal({
     level,
+    reward,
     onNextLevel,
     playClick,
     playBingo
@@ -31,7 +32,7 @@ export default function NextLevelModal({
                 <div className="bg-gradient-to-r from-yellow-600/90 to-yellow-800/90 text-white px-6 py-2 rounded-xl border-2 border-yellow-400 shadow-[0_0_20px_rgba(255,215,0,0.5)] backdrop-blur-sm">
                     <div className="flex items-center justify-center gap-2">
                         <span className="text-2xl font-black tracking-wider drop-shadow-md">
-                            +{100 + level}
+                            +{reward ?? (100 + level)}
                         </span>
                         <img
                             src="/Images/Immutable/Coin.png"

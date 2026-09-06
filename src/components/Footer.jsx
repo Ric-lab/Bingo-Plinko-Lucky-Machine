@@ -1,7 +1,7 @@
 import React from 'react';
 
 export default function Footer({ phase, onSpin, onPowerUp, balls, getImage }) {
-    const busy = phase === 'RESOLVE' || phase === 'GAME_OVER';
+    const busy = phase === 'SPINNING' || phase === 'RESOLVE' || phase === 'GAME_OVER' || phase === 'VICTORY' || phase === 'BONUS_WHEEL';
 
     // spin.png is 720x256 (ratio ~2.8:1). At flex-1 width we let it define its own height
     // via padding-top trick so it never distorts.

@@ -72,76 +72,7 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
 
     // Custom render for CELEBRATION type (LUCK) to be festive but direct
     if (type === 'celebration') {
-        const canvasRef = React.useRef(null);
-
-        // Trigger confetti on mount (Optimized Burst)
-        React.useEffect(() => {
-            if (isOpen && canvasRef.current) {
-                const myConfetti = confetti.create(canvasRef.current, {
-                    resize: true,
-                    useWorker: true
-                });
-
-                // Responsive Settings
-                const isMobile = window.innerWidth < 768;
-                const particleCount = isMobile ? 60 : 100;
-                const scalar = isMobile ? 1.2 : 1.0; // Bigger on mobile
-                const velocity = isMobile ? 60 : 80; // Shoot higher on mobile (taller screen)
-
-                const defaults = {
-                    spread: isMobile ? 50 : 70,
-                    ticks: 200,
-                    gravity: 1.2,
-                    decay: 0.92,
-                    startVelocity: velocity,
-                    colors: ['#FFD700', '#FFA500', '#DAA520', '#FFFFFF'],
-                    scalar
-                };
-
-                // 1. Left Cannon (Bottom Left)
-                myConfetti({
-                    ...defaults,
-                    particleCount,
-                    angle: 60,
-                    origin: { x: 0, y: 0.9 } // Shoot from bottom left
-                });
-
-                // 2. Right Cannon (Bottom Right)
-                myConfetti({
-                    ...defaults,
-                    particleCount,
-                    angle: 120,
-                    origin: { x: 1, y: 0.9 } // Shoot from bottom right
-                });
-            }
-        }, [isOpen]);
-
-        return (
-            <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none animate-bounce-in flex-col overflow-hidden">
-                <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 animate-fade-in" />
-
-                {/* Local Canvas for Confetti */}
-                <canvas
-                    ref={canvasRef}
-                    className="absolute inset-0 w-full h-full pointer-events-none z-0"
-                />
-
-                <div className="flex flex-col items-center animate-pulse px-4 text-center z-10">
-                    <h1 className="text-6xl font-black text-yellow-300 drop-shadow-[0_3px_0_rgba(255,140,0,1)] stroke-black tracking-widest uppercase flex items-center justify-center gap-2">
-                        <span className="text-5xl">🍀</span> LUCKY! <span className="text-5xl">🍀</span>
-                    </h1>
-
-                    {message && (
-                        <div className="mt-2 flex items-center gap-2 justify-center">
-                            <span className="text-white font-black text-6xl drop-shadow-[0_3px_3px_rgba(0,0,0,0.8)] stroke-black tracking-widest">
-                                {message.replace('+', '').replace('🟡', '')}
-                            </span>
-                            <img src="/Images/Immutable/Coin.png" alt="Coin" className="w-12 h-12 object-contain drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]" />
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
+        return <CelebrationContent message={message} isOpen={isOpen} />;
     }
 
     return (
@@ -185,3 +116,72 @@ export default function MessageModal({ isOpen, onClose, type = 'info', title, me
         </div>
     );
 }
+
+function CelebrationContent({ message, isOpen }) {
+    const canvasRef = React.useRef(null);
+
+    React.useEffect(() => {
+        if (isOpen && canvasRef.current) {
+            const myConfetti = confetti.create(canvasRef.current, {
+                resize: true,
+                useWorker: true
+            });
+
+            const isMobile = window.innerWidth < 768;
+            const particleCount = isMobile ? 60 : 100;
+            const scalar = isMobile ? 1.2 : 1.0;
+            const velocity = isMobile ? 60 : 80;
+
+            const defaults = {
+                spread: isMobile ? 50 : 70,
+                ticks: 200,
+                gravity: 1.2,
+                decay: 0.92,
+                startVelocity: velocity,
+                colors: ['#FFD700', '#FFA500', '#DAA520', '#FFFFFF'],
+                scalar
+            };
+
+            myConfetti({
+                ...defaults,
+                particleCount,
+                angle: 60,
+                origin: { x: 0, y: 0.9 }
+            });
+
+            myConfetti({
+                ...defaults,
+                particleCount,
+                angle: 120,
+                origin: { x: 1, y: 0.9 }
+            });
+        }
+    }, [isOpen]);
+
+    return (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none animate-bounce-in flex-col overflow-hidden">
+            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 animate-fade-in" />
+
+            <canvas
+                ref={canvasRef}
+                className="absolute inset-0 w-full h-full pointer-events-none z-0"
+            />
+
+            <div className="flex flex-col items-center animate-pulse px-4 text-center z-10">
+                <h1 className="text-6xl font-black text-yellow-300 drop-shadow-[0_3px_0_rgba(255,140,0,1)] stroke-black tracking-widest uppercase flex items-center justify-center gap-2">
+                    <span className="text-5xl">🍀</span> LUCKY! <span className="text-5xl">🍀</span>
+                </h1>
+
+                {message && (
+                    <div className="mt-2 flex items-center gap-2 justify-center">
+                        <span className="text-white font-black text-6xl drop-shadow-[0_3px_3px_rgba(0,0,0,0.8)] stroke-black tracking-widest">
+                            {message.replace('+', '').replace('🟡', '')}
+                        </span>
+                        <img src="/Images/Immutable/Coin.png" alt="Coin" className="w-12 h-12 object-contain drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]" />
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+

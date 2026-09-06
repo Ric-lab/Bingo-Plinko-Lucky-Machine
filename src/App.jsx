@@ -48,8 +48,8 @@ export default function App() {
   const [gameMode, setGameMode] = useState('FINGO');
 
   const {
-    state: { coins, balls, level, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive, luckySpinReward },
-    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, completeLuckySpin }
+    state: { coins, balls, level, bingoCard, slotsResult, winState, winReward, phase, fireBallActive, magicActive, luckySpinReward },
+    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, claimLuckySpinReward, completeLuckySpin }
   } = useGameLogic(gameMode);
 
   // Target columns that have useful (unmarked matching) numbers or magic mode active
@@ -176,13 +176,13 @@ export default function App() {
   const canvasRef = useRef();
 
   const handleSlotClick = (colIndex) => {
-    // Attempt logic drop
+    if (phase !== 'DROP' || balls <= 0) return;
     const isFire = fireBallActive;
-    if (dropBall(colIndex)) {
-      // Visual drop (ball)
-      if (canvasRef.current) {
-        canvasRef.current.dropBall(colIndex, isFire);
-      }
+
+    // Confirm canvas is ready and physical ball is created before deducting ball
+    const dropped = canvasRef.current?.dropBall(colIndex, isFire);
+    if (dropped) {
+      dropBall(colIndex);
 
       // SFX for Fireball
       if (isFire) {
@@ -192,13 +192,17 @@ export default function App() {
   };
 
   const handleMagicSpin = (number, cost) => {
-    // 1. Transaction
-    if (buyItem('magic', cost)) {
-      // 2. Force Spin
-      startSpin(number);
-      // 3. Close & Feedback handled by component
+    // 1. Verify player has enough coins first
+    if (coins < cost) {
+      showMessage('minimal', 'NOT ENOUGH COINS', '', 1200);
+      return;
     }
-    // Error handled by modal
+
+    // 2. Attempt spin first; only charge coins if spin is accepted
+    const spinStarted = startSpin(number);
+    if (spinStarted) {
+      buyItem('magic', cost);
+    }
   };
 
   const handleBallLanded = (binIndex, isFireball = false) => {
@@ -255,7 +259,11 @@ export default function App() {
             <button
               onClick={() => {
                 playClick();
-                setGameMode('BINGO');
+                if (gameMode === 'BINGO') {
+                  initLevel();
+                } else {
+                  setGameMode('BINGO');
+                }
                 setGameStarted(true);
               }}
               className="w-64 transition-transform hover:scale-105 active:scale-95"
@@ -267,7 +275,11 @@ export default function App() {
             <button
               onClick={() => {
                 playClick();
-                setGameMode('FINGO');
+                if (gameMode === 'FINGO') {
+                  initLevel();
+                } else {
+                  setGameMode('FINGO');
+                }
                 setGameStarted(true);
               }}
               className="w-64 transition-transform hover:scale-105 active:scale-95"
@@ -279,7 +291,11 @@ export default function App() {
             <button
               onClick={() => {
                 playClick();
-                setGameMode('SPINGO');
+                if (gameMode === 'SPINGO') {
+                  initLevel();
+                } else {
+                  setGameMode('SPINGO');
+                }
                 setGameStarted(true);
               }}
               className="w-64 transition-transform hover:scale-105 active:scale-95"
@@ -304,7 +320,10 @@ export default function App() {
       <SideMenu
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
-        onGoHome={() => setGameStarted(false)}
+        onGoHome={() => {
+          setIsMenuOpen(false);
+          setGameStarted(false);
+        }}
         settings={audioSettings}
         onUpdateSettings={setAudioSettings}
       />
@@ -395,10 +414,11 @@ export default function App() {
 
 
       {/* Game Over / Next Level Logic */}
-      {phase === 'GAME_OVER' && (
+      {(phase === 'GAME_OVER' || phase === 'VICTORY') && (
         winState ? (
           <NextLevelModal
             level={level}
+            reward={winReward || ((gameMode === 'BINGO' ? 300 : gameMode === 'SPINGO' ? 50 : 100) + level)}
             onNextLevel={nextLevel}
             playClick={playClick}
             playBingo={playBingo}
@@ -418,6 +438,7 @@ export default function App() {
       {phase === 'BONUS_WHEEL' && (
         <LuckySpin
           spinLuckySpin={spinLuckySpin}
+          claimLuckySpinReward={claimLuckySpinReward}
           completeLuckySpin={completeLuckySpin}
           reward={luckySpinReward}
           playTicker={playPalheta}

@@ -158,6 +158,7 @@ export function useGameLogic(gameMode = 'FINGO') {
     // PHASE: 'SPIN' | 'SPINNING' | 'DROP' | 'RESOLVE' | 'GAME_OVER' | 'VICTORY' | 'BONUS_WHEEL'
     const [phase, setPhase] = useState('SPIN');
     const [luckySpinReward, setLuckySpinReward] = useState(null);
+    const [winReward, setWinReward] = useState(0);
 
     // Config for Current Mode
     const config = MODE_CONFIG[gameMode || 'FINGO'];
@@ -214,6 +215,7 @@ export function useGameLogic(gameMode = 'FINGO') {
         setBingoCard(newCard);
         setWinState(false);
         setIsGameOver(false);
+        setWinReward(0);
         setPhase('SPIN');
 
         // Set Balls based on Mode
@@ -265,9 +267,16 @@ export function useGameLogic(gameMode = 'FINGO') {
         else if (r < 99.9) reward = 7500;
         else reward = 10000;
 
-        setCoins(prev => prev + reward);
+        // Save reward for visual wheel alignment; credit coins when wheel stops (claimLuckySpinReward)
         setLuckySpinReward(reward);
         return reward;
+    };
+
+    const claimLuckySpinReward = (rewardAmount) => {
+        const finalReward = typeof rewardAmount === 'number' ? rewardAmount : luckySpinReward;
+        if (finalReward && typeof finalReward === 'number') {
+            setCoins(prev => prev + finalReward);
+        }
     };
 
     const completeLuckySpin = () => {
@@ -280,7 +289,7 @@ export function useGameLogic(gameMode = 'FINGO') {
     };
 
     const startSpin = (magicNumberOverride = null) => {
-        if (phase !== 'SPIN' && !(phase === 'DROP' && magicNumberOverride !== null)) return;
+        if (phase !== 'SPIN' && !(phase === 'DROP' && magicNumberOverride !== null)) return false;
 
         setPhase('SPINNING');
 
@@ -340,6 +349,7 @@ export function useGameLogic(gameMode = 'FINGO') {
 
         setSlotsResult(newSlots);
         setTimeout(() => setPhase('DROP'), 2200);
+        return true;
     };
 
     const dropBall = () => {
@@ -384,15 +394,12 @@ export function useGameLogic(gameMode = 'FINGO') {
                 setTimeout(() => {
                     setWinState(true);
                     setIsGameOver(true);
-                    setPhase('GAME_OVER');
+                    setPhase('VICTORY');
 
-                    // REWARDS
-                    let winReward = 0;
-                    if (gameMode === 'FINGO') winReward = 100 + currentLevel;
-                    else if (gameMode === 'BINGO') winReward = 300 + currentLevel;
-                    else if (gameMode === 'SPINGO') winReward = 50 + currentLevel;
-
-                    setCoins(prev => prev + winReward);
+                    // REWARDS from MODE_CONFIG
+                    const earnedReward = (config?.baseReward || 100) + currentLevel;
+                    setWinReward(earnedReward);
+                    setCoins(prev => prev + earnedReward);
                 }, 1100);
             } else {
                 // NO Win yet
@@ -456,6 +463,7 @@ export function useGameLogic(gameMode = 'FINGO') {
             slotsResult,
             isGameOver,
             winState,
+            winReward,
             phase,
             fireBallActive,
             magicActive,
@@ -469,6 +477,7 @@ export function useGameLogic(gameMode = 'FINGO') {
             buyItem,
             nextLevel,
             spinLuckySpin,
+            claimLuckySpinReward,
             completeLuckySpin
         }
     };

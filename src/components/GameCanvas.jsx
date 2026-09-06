@@ -44,11 +44,13 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
     const sceneRef = useRef(null);
     const engineRef = useRef(null);
     const renderRef = useRef(null);
+    const runnerRef = useRef(null);
     // Track balls that have already triggered a score to prevent double-counting/crashes
     const processedBalls = useRef(new Set());
 
     // Fix Stale Closure: Keep track of the latest callback
     const onBallLandedRef = useRef(onBallLanded);
+    const vibrationLevelRef = useRef(vibrationLevel);
 
     // Dynamic targets for subtle peg steering without restarting physics engine
     const goldenColsRef = useRef(goldenCols);
@@ -67,12 +69,16 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
     }, [onBallLanded, onPegHit]);
 
     useEffect(() => {
+        vibrationLevelRef.current = vibrationLevel;
+    }, [vibrationLevel]);
+
+    useEffect(() => {
         goldenColsRef.current = goldenCols;
     }, [goldenCols]);
 
     useImperativeHandle(ref, () => ({
         dropBall: (colIdx, isFireBall = false) => {
-            if (!engineRef.current || !renderRef.current) return;
+            if (!engineRef.current || !renderRef.current) return false;
 
             const width = renderRef.current.options.width;
 
@@ -127,6 +133,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
             }
 
             Composite.add(engineRef.current.world, ball);
+            return true;
         }
     }));
 
@@ -373,7 +380,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                         }
 
                         // 2. Haptic
-                        if (vibrationLevel > 0 && navigator.vibrate) navigator.vibrate(15 * vibrationLevel);
+                        if (vibrationLevelRef.current > 0 && navigator.vibrate) navigator.vibrate(15 * vibrationLevelRef.current);
 
                         // 3. Visual (Light Up)
                         // Save the peg position and time to the map
@@ -417,8 +424,8 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                         // --- FIREBALL IMPACT EFFECT ---
                         if (ball.label === 'fireball') {
                             // 1. Heavy Vibrate
-                            if (vibrationLevel > 0 && navigator.vibrate) {
-                                navigator.vibrate([100 * vibrationLevel, 50 * vibrationLevel, 100 * vibrationLevel]); // Scaled vibration
+                            if (vibrationLevelRef.current > 0 && navigator.vibrate) {
+                                navigator.vibrate([100 * vibrationLevelRef.current, 50 * vibrationLevelRef.current, 100 * vibrationLevelRef.current]); // Scaled vibration
                             }
                             // 2. Trigger Shake
                             setShake(true);
@@ -427,8 +434,8 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
 
                         // 5. DELAYED REMOVAL (Let user see it land)
                         setTimeout(() => {
-                            Composite.remove(engine.world, ball);
-                        }, 1000); // 2.0s delay (User requested longer time)
+                            if (engineRef.current) Composite.remove(engineRef.current.world, ball);
+                        }, 1000);
                     } else if (ball && isFloor) {
                         // FEEDBACK: Play sound/haptics on floor hit (ONCE)
                         if (!ball.hasHitFloor) {
@@ -436,14 +443,23 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                             if (playHitRef.current && ball.label !== 'fireball') {
                                 playHitRef.current();
                             }
-                            if (vibrationLevel > 0 && navigator.vibrate) navigator.vibrate(10 * vibrationLevel);
+                            if (vibrationLevelRef.current > 0 && navigator.vibrate) navigator.vibrate(10 * vibrationLevelRef.current);
                             ball.hasHitFloor = true;
                         }
 
-                        // Cleanup on floor hit (ONLY if missed sensor)
-                        // If it hit the sensor, it's in processedBalls, so we let the timeout handle it.
+                        // GUARANTEE: Even if the ball hit the floor without triggering sensor,
+                        // resolve turn based on current x position so phase never freezes in RESOLVE.
                         if (!processedBalls.current.has(ball.id)) {
-                            Composite.remove(engine.world, ball);
+                            processedBalls.current.add(ball.id);
+                            const canvasW = renderRef.current?.options?.width || sceneRef.current?.clientWidth || width || 360;
+                            const binW = canvasW / 5;
+                            const fallbackBinIdx = Math.max(0, Math.min(4, Math.floor(ball.position.x / binW)));
+                            if (onBallLandedRef.current) {
+                                onBallLandedRef.current(fallbackBinIdx, ball.label === 'fireball');
+                            }
+                            setTimeout(() => {
+                                if (engineRef.current) Composite.remove(engineRef.current.world, ball);
+                            }, 800);
                         }
                     }
 
@@ -593,14 +609,41 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                 }
             });
 
-            Runner.run(Runner.create(), engine);
+            const runner = Runner.create();
+            runnerRef.current = runner;
+            Runner.run(runner, engine);
             Render.run(render);
 
         }, 100); // 100ms delay for layout stability
 
+        // Handle screen resize & orientation change dynamically
+        const handleResize = () => {
+            if (!sceneRef.current || !renderRef.current) return;
+            const newWidth = sceneRef.current.clientWidth;
+            const newHeight = sceneRef.current.clientHeight;
+            if (newWidth > 0 && newHeight > 0) {
+                renderRef.current.options.width = newWidth;
+                renderRef.current.options.height = newHeight;
+                if (renderRef.current.canvas) {
+                    renderRef.current.canvas.width = newWidth * (window.devicePixelRatio || 1);
+                    renderRef.current.canvas.height = newHeight * (window.devicePixelRatio || 1);
+                    renderRef.current.canvas.style.width = `${newWidth}px`;
+                    renderRef.current.canvas.style.height = `${newHeight}px`;
+                }
+            }
+        };
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', handleResize);
+
         // Cleanup
         return () => {
             clearTimeout(timer);
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('orientationchange', handleResize);
+            if (runnerRef.current) {
+                Runner.stop(runnerRef.current);
+                runnerRef.current = null;
+            }
             if (renderRef.current) {
                 Render.stop(renderRef.current);
                 if (renderRef.current.canvas) renderRef.current.canvas.remove();

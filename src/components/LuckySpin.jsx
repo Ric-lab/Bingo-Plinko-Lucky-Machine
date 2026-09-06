@@ -7,7 +7,7 @@ const PRIZE_SLICES = [
     5, 50, 100, 250, 500, 1000, 2500, 5000, 7500, 10000
 ];
 
-export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, playTicker }) {
+export default function LuckySpin({ spinLuckySpin, claimLuckySpinReward, completeLuckySpin, reward, playTicker }) {
     const [uiState, setUiState] = useState('IDLE'); // IDLE, SPINNING, SHOW_RESULT
     const [rotation, setRotation] = useState(0);
     const [displayReward, setDisplayReward] = useState(null);
@@ -121,6 +121,7 @@ export default function LuckySpin({ spinLuckySpin, completeLuckySpin, reward, pl
 
         // 3. Wait for animation to finish (8s)
         setTimeout(() => {
+            claimLuckySpinReward?.(wonPrize);
             setUiState('SHOW_RESULT');
         }, 8000);
     };
