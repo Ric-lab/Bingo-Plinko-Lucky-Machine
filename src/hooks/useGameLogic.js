@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { calculateProbabilities } from '../utils/mathUtils';
+import { calculateProbabilities, pickNonAdjacentColumns } from '../utils/mathUtils';
 import { loadJSON, saveJSON } from '../utils/storage';
 
 const STORAGE_KEY = 'bplm.gameLogic.v1';
@@ -310,17 +310,8 @@ export function useGameLogic(gameMode = 'FINGO') {
             if (cell) setMagicActive(true);
         }
 
-        // Determine Chosen Indices (Golden Buckets)
-        let chosenIndices = [];
-        if (availableCols.length < targetCount) targetCount = availableCols.length;
-
-        if (targetCount > 0) {
-            // Simplified selection logic
-            const allIndices = availableCols;
-            // Shuffle and pick targetCount
-            const shuffled = [...allIndices].sort(() => 0.5 - Math.random());
-            chosenIndices = shuffled.slice(0, targetCount);
-        }
+        // Determine Chosen Indices (Golden Buckets) - strictly non-adjacent
+        const chosenIndices = pickNonAdjacentColumns(availableCols, targetCount);
 
         // Fill Data
         const newSlots = [0, 0, 0, 0, 0];

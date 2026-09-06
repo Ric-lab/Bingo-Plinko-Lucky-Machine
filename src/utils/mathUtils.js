@@ -45,3 +45,52 @@ export function calculateProbabilities(currentLevel) {
         three: p3
     };
 }
+
+/**
+ * Selects up to `targetCount` columns from `availableCols` ensuring that
+ * no two chosen columns are adjacent (distance |c1 - c2| >= 2).
+ * 
+ * @param {number[]} availableCols - Array of column indices (e.g. [0, 1, 2, 3, 4]).
+ * @param {number} targetCount - Desired number of columns to select (typically 1, 2, or 3).
+ * @returns {number[]} Array of selected non-adjacent column indices.
+ */
+export function pickNonAdjacentColumns(availableCols, targetCount) {
+    if (!availableCols || availableCols.length === 0 || targetCount <= 0) {
+        return [];
+    }
+
+    const sortedCols = [...availableCols].sort((a, b) => a - b);
+
+    // Find all non-adjacent combinations of a specific size `k`
+    const findCombinations = (k) => {
+        const combos = [];
+        const backtrack = (start, current) => {
+            if (current.length === k) {
+                combos.push([...current]);
+                return;
+            }
+            for (let i = start; i < sortedCols.length; i++) {
+                const col = sortedCols[i];
+                if (current.length === 0 || col - current[current.length - 1] >= 2) {
+                    current.push(col);
+                    backtrack(i + 1, current);
+                    current.pop();
+                }
+            }
+        };
+        backtrack(0, []);
+        return combos;
+    };
+
+    // Try desired targetCount down to 1 until we find valid non-adjacent combinations
+    for (let count = Math.min(targetCount, sortedCols.length); count >= 1; count--) {
+        const validCombos = findCombinations(count);
+        if (validCombos.length > 0) {
+            const randomIndex = Math.floor(Math.random() * validCombos.length);
+            return validCombos[randomIndex];
+        }
+    }
+
+    return [sortedCols[Math.floor(Math.random() * sortedCols.length)]];
+}
+
