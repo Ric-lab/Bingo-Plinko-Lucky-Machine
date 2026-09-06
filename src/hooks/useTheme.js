@@ -1,7 +1,3 @@
-import { useEffect, useRef, useState } from 'react';
-import { loadJSON, saveJSON } from '../utils/storage';
-
-const STORAGE_KEY = 'bplm.theme.v1';
 const FIXED_SKIN = 'Standard';
 
 export function useTheme() {

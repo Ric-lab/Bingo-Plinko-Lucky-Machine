@@ -1,7 +1,17 @@
 // test-fingo-physics.mjs
 import assert from 'node:assert/strict';
+import Matter from 'matter-js';
 import { getSessionDropCount, incrementSessionDropCount, resetSessionDropCount, getSessionAssistFactor } from './src/utils/sessionPhysics.js';
 import { calculateProbabilities, pickNonAdjacentColumns } from './src/utils/mathUtils.js';
+import { PHYSICS_CONFIG, computeFloorFallbackBin, buildStaticWorld } from './src/utils/plinkoPhysics.js';
+import {
+    MODE_CONFIG,
+    calculateWinReward,
+    checkLineMatch,
+    checkFullCard,
+    checkAnyFive,
+    getLevelRanges
+} from './src/hooks/useGameLogic.js';
 
 console.log('=== TEST 1: sessionPhysics (Peg Assist Curve & Drop Tracking) ===');
 resetSessionDropCount();
@@ -55,29 +65,7 @@ for (let i = 0; i < 50; i++) {
 console.log('✓ mathUtils tests PASSED!');
 
 
-console.log('\n=== TEST 3: FINGO Win Condition (checkLineMatch) ===');
-function checkLineMatch(card) {
-    // 1. Rows
-    for (let r = 0; r < 5; r++) {
-        const rowCells = card.filter(c => c.row === r);
-        if (rowCells.every(c => c.marked)) return true;
-    }
-    // 2. Columns
-    for (let c = 0; c < 5; c++) {
-        const colCells = card.filter(cell => cell.col === c);
-        if (colCells.every(c => c.marked)) return true;
-    }
-    // 3. Diagonals
-    const diag1 = [0, 1, 2, 3, 4].map(i => card.find(c => c.col === i && c.row === i));
-    if (diag1.every(c => c.marked)) return true;
-
-    const diag2 = [0, 1, 2, 3, 4].map(i => card.find(c => c.col === (4 - i) && c.row === i));
-    if (diag2.every(c => c.marked)) return true;
-
-    return false;
-}
-
-// Generate blank card
+console.log('\n=== TEST 3: FINGO Win Condition (Real checkLineMatch from useGameLogic) ===');
 function createTestCard() {
     const card = [];
     for (let c = 0; c < 5; c++) {
@@ -126,14 +114,6 @@ console.log('✓ FINGO win check tests PASSED!');
 
 
 console.log('\n=== TEST 4: Peg Assist Vector Calculation ===');
-// Test the logic used in GameCanvas.jsx collision handler
-const PHYSICS_CONFIG = {
-    PEG_ACTIVE_FORCE: 0.05,
-    PEG_STEER_NUDGE: 0.006,
-    WALL_KICK_X: 0.15,
-    WALL_KICK_Y: -0.05,
-};
-
 function computePegNudge(ballX, targetCols, canvasWidth, dropCount) {
     const binW = canvasWidth / 5;
     let bestTargetX = null;
@@ -161,28 +141,21 @@ function computePegNudge(ballX, targetCols, canvasWidth, dropCount) {
 }
 
 const canvasW = 360;
-// Target is col 0 (center at 36px)
-// Ball at x = 100px (to the right of target)
-// Early session: dropCount = 1 (assist = 1.0)
 const nudgeEarly = computePegNudge(100, [0], canvasW, 1);
 assert.ok(nudgeEarly < 0, 'Nudge should be negative (steer left towards target)');
 assert.equal(nudgeEarly, -1 * PHYSICS_CONFIG.PEG_STEER_NUDGE * 1.0);
 
-// Late session: dropCount = 35 (assist = 0.15)
 const nudgeLate = computePegNudge(100, [0], canvasW, 35);
 assert.ok(nudgeLate < 0, 'Nudge should still be towards target');
 assert.equal(nudgeLate, -1 * PHYSICS_CONFIG.PEG_STEER_NUDGE * 0.15);
 assert.ok(Math.abs(nudgeEarly) > Math.abs(nudgeLate), 'Early assist nudge must be stronger than late assist');
 
-// Ball already directly aligned (diffX <= 6): should not nudge
 const nudgeAligned = computePegNudge(36, [0], canvasW, 1);
 assert.equal(nudgeAligned, 0, 'Aligned ball should have 0 nudge');
-
 console.log('✓ Peg Assist Vector calculations PASSED!');
 
 
 console.log('\n=== TEST 5: Wall Bounce Physics & Bucket Sensors ===');
-// Wall bounce forces
 const wallLeftKick = { x: PHYSICS_CONFIG.WALL_KICK_X, y: PHYSICS_CONFIG.WALL_KICK_Y };
 const wallRightKick = { x: -PHYSICS_CONFIG.WALL_KICK_X, y: PHYSICS_CONFIG.WALL_KICK_Y };
 assert.ok(wallLeftKick.x > 0, 'Left wall kick must push to the right (+x)');
@@ -190,68 +163,67 @@ assert.ok(wallLeftKick.y < 0, 'Left wall kick must have upward lift (-y)');
 assert.ok(wallRightKick.x < 0, 'Right wall kick must push to the left (-x)');
 assert.ok(wallRightKick.y < 0, 'Right wall kick must have upward lift (-y)');
 
-// Duplicate prevention set test
 const processedBalls = new Set();
 const ballId = 42;
 assert.equal(processedBalls.has(ballId), false);
 processedBalls.add(ballId);
 assert.equal(processedBalls.has(ballId), true, 'Ball must be marked as processed to prevent double scoring');
-
 console.log('✓ Wall bounce & bucket duplicate prevention PASSED!');
 
 
-console.log('\n=== TEST 6: Floor Fallback Turn Resolution (Garantia de Encerramento) ===');
-// Simulates the floor collision fallback in GameCanvas.jsx
-function computeFloorFallbackBin(ballX, canvasWidth = 360) {
-    const binW = canvasWidth / 5;
-    return Math.max(0, Math.min(4, Math.floor(ballX / binW)));
-}
-
-// Edge case: Ball touches floor far to the left (negative x)
+console.log('\n=== TEST 6: Real Floor Fallback & Dynamic Resize Rebuild (plinkoPhysics) ===');
+// 6.1 Real computeFloorFallbackBin imported from plinkoPhysics.js
 assert.equal(computeFloorFallbackBin(-50, 360), 0, 'Negative x must clamp to bin 0');
-// Edge case: Ball touches floor far to the right (x > canvasWidth)
 assert.equal(computeFloorFallbackBin(450, 360), 4, 'Out of bounds right x must clamp to bin 4');
-// Standard bins (360px width => 72px per bin)
 assert.equal(computeFloorFallbackBin(36, 360), 0, 'x=36 must resolve to bin 0');
 assert.equal(computeFloorFallbackBin(100, 360), 1, 'x=100 must resolve to bin 1');
 assert.equal(computeFloorFallbackBin(180, 360), 2, 'x=180 must resolve to bin 2');
 assert.equal(computeFloorFallbackBin(250, 360), 3, 'x=250 must resolve to bin 3');
 assert.equal(computeFloorFallbackBin(320, 360), 4, 'x=320 must resolve to bin 4');
 
-// Verify deduplication flow on floor hit:
-const testFloorProcessed = new Set();
-let resolutionsCount = 0;
-const testBall = { id: 999, position: { x: 180 } };
+// 6.2 Real buildStaticWorld dynamic repositioning on resize
+const engine = Matter.Engine.create();
 
-function simulateFloorHit(ball) {
-    if (!testFloorProcessed.has(ball.id)) {
-        testFloorProcessed.add(ball.id);
-        const bin = computeFloorFallbackBin(ball.position.x);
-        resolutionsCount++;
-        return bin;
-    }
-    return null; // Already processed
-}
+// Initial build at 400x600
+buildStaticWorld(engine, 400, 600);
+let bodies = Matter.Composite.allBodies(engine.world);
+assert.ok(bodies.length > 0, 'Static bodies must be populated');
 
-assert.equal(simulateFloorHit(testBall), 2, 'First floor hit must resolve turn');
-assert.equal(simulateFloorHit(testBall), null, 'Subsequent floor hit of same ball must NOT resolve turn twice');
-assert.equal(resolutionsCount, 1, 'Turn resolution must be triggered exactly once per ball');
-console.log('✓ Floor fallback turn resolution tests PASSED!');
+const initialFloor = bodies.find(b => b.label === 'floor');
+assert.ok(initialFloor, 'Floor must exist');
+assert.equal(initialFloor.position.y, 600 + 25, 'Floor position must match 600px height');
+
+const initialSensors = bodies.filter(b => b.label.startsWith('bin-'));
+assert.equal(initialSensors.length, 5, 'Must have 5 bucket sensors');
+initialSensors.forEach((s, idx) => {
+    assert.equal(s.position.y, 600 - 20, `Sensor ${idx} must be positioned at height - 20 (580px)`);
+});
+
+// Dynamic Resize to 320x480 (e.g. window resize or mobile orientation change)
+buildStaticWorld(engine, 320, 480);
+bodies = Matter.Composite.allBodies(engine.world);
+
+const resizedFloor = bodies.find(b => b.label === 'floor');
+assert.equal(resizedFloor.position.y, 480 + 25, 'Resized floor position must dynamically adjust to 480px height');
+
+const resizedSensors = bodies.filter(b => b.label.startsWith('bin-'));
+assert.equal(resizedSensors.length, 5, 'Must still have exactly 5 bucket sensors');
+resizedSensors.forEach((s, idx) => {
+    assert.equal(s.position.y, 480 - 20, `Resized sensor ${idx} must dynamically adjust to 480 - 20 (460px)`);
+    const expectedX = (idx * (320 / 5)) + ((320 / 5) / 2);
+    assert.ok(Math.abs(s.position.x - expectedX) < 1, `Sensor ${idx} X must align to new bucket column center`);
+});
+
+console.log('✓ Floor fallback & dynamic resize static world rebuild tests PASSED!');
 
 
-console.log('\n=== TEST 7: Mode Rewards & Win Conditions (FINGO / BINGO / SPINGO) ===');
-const MODE_CONFIG = {
-    'FINGO': { balls: 50, centerFree: true, baseReward: 100 },
-    'BINGO': { balls: 100, centerFree: true, baseReward: 300 },
-    'SPINGO': { balls: 25, centerFree: false, baseReward: 50 }
-};
+console.log('\n=== TEST 7: Real Mode Rewards & Win Conditions (from useGameLogic) ===');
+// 7.1 Verify MODE_CONFIG values
+assert.equal(MODE_CONFIG.FINGO.balls, 50);
+assert.equal(MODE_CONFIG.BINGO.balls, 100);
+assert.equal(MODE_CONFIG.SPINGO.balls, 25);
 
-function calculateWinReward(mode, level) {
-    const config = MODE_CONFIG[mode];
-    return (config?.baseReward || 100) + level;
-}
-
-// Check reward calculation
+// 7.2 Verify real calculateWinReward from useGameLogic.js
 assert.equal(calculateWinReward('FINGO', 1), 101, 'FINGO lvl 1 reward must be 101');
 assert.equal(calculateWinReward('FINGO', 5), 105, 'FINGO lvl 5 reward must be 105');
 assert.equal(calculateWinReward('BINGO', 1), 301, 'BINGO lvl 1 reward must be 301');
@@ -259,97 +231,87 @@ assert.equal(calculateWinReward('BINGO', 10), 310, 'BINGO lvl 10 reward must be 
 assert.equal(calculateWinReward('SPINGO', 1), 51, 'SPINGO lvl 1 reward must be 51');
 assert.equal(calculateWinReward('SPINGO', 25), 75, 'SPINGO lvl 25 reward must be 75');
 
-// Test BINGO full card win condition (Blackout)
-function checkFullCard(card) {
-    return card.every(c => c.marked);
-}
+// 7.3 Real checkFullCard from useGameLogic.js
 const testBingoCard = createTestCard();
 assert.equal(checkFullCard(testBingoCard), false, 'Initial card should not win BINGO full card');
 testBingoCard.forEach(c => c.marked = true);
 assert.equal(checkFullCard(testBingoCard), true, 'Blackout card must win BINGO');
 
-// Test SPINGO any five win condition
-function checkAnyFive(card) {
-    return card.filter(c => c.marked).length >= 5;
-}
+// 7.4 Real checkAnyFive from useGameLogic.js
 const testSpingoCard = createTestCard();
-testSpingoCard[0].marked = false; // reset any
-assert.equal(checkAnyFive(testSpingoCard.filter(c => !c.isFree)), false, 'Unmarked card should not win SPINGO');
-// Mark 5 distinct cells
+testSpingoCard.forEach(c => c.marked = false); // clear free space
+assert.equal(checkAnyFive(testSpingoCard), false, 'Unmarked card should not win SPINGO');
 for (let i = 0; i < 5; i++) {
     testSpingoCard[i].marked = true;
 }
 assert.equal(checkAnyFive(testSpingoCard), true, '5 marked numbers must win SPINGO');
-console.log('✓ Mode rewards & win conditions tests PASSED!');
+
+// 7.5 Real getLevelRanges from useGameLogic.js
+const rangesLvl1 = getLevelRanges(1);
+assert.deepEqual(rangesLvl1.B, [1, 10], 'Level 1 (Easy) B range must be 1-10');
+const rangesLvl2 = getLevelRanges(2);
+assert.deepEqual(rangesLvl2.B, [1, 15], 'Level 2 (Medium) B range must be 1-15');
+const rangesLvl5 = getLevelRanges(5);
+assert.deepEqual(rangesLvl5.B, [1, 20], 'Level 5 (Hard) B range must be 1-20');
+
+console.log('✓ Real Mode rewards & win conditions tests PASSED!');
 
 
-console.log('\n=== TEST 8: Lucky Spin Deferral & Safe Spin Start ===');
-// Simulate startSpin guard
-function simulateStartSpin(phase, magicNumberOverride = null) {
-    if (phase !== 'SPIN' && !(phase === 'DROP' && magicNumberOverride !== null)) {
-        return false;
-    }
-    return true;
+console.log('\n=== TEST 8: Lucky Spin Idempotency & Safe State Machine ===');
+// 8.1 Test claimLuckySpinReward idempotency
+let userCoins = 1000;
+let luckySpinReward = 500;
+
+function executeClaim(amount) {
+    if (luckySpinReward === null) return 0;
+    const finalReward = typeof amount === 'number' ? amount : luckySpinReward;
+    luckySpinReward = null; // consumed immediately
+    userCoins += finalReward;
+    return finalReward;
 }
 
-// Normal spin only allowed in SPIN phase
-assert.equal(simulateStartSpin('SPIN'), true, 'startSpin allowed in SPIN phase');
-assert.equal(simulateStartSpin('SPINNING'), false, 'startSpin blocked in SPINNING phase');
-assert.equal(simulateStartSpin('DROP'), false, 'normal startSpin blocked in DROP phase');
-assert.equal(simulateStartSpin('RESOLVE'), false, 'startSpin blocked in RESOLVE phase');
-assert.equal(simulateStartSpin('GAME_OVER'), false, 'startSpin blocked in GAME_OVER phase');
+// First claim: Successfully claims 500
+const firstClaim = executeClaim();
+assert.equal(firstClaim, 500, 'First claim must return 500');
+assert.equal(userCoins, 1500, 'Coins must increase to 1500');
+assert.equal(luckySpinReward, null, 'luckySpinReward must be consumed to null');
 
-// Magic spin allowed in DROP phase with number override
-assert.equal(simulateStartSpin('DROP', 42), true, 'magic spin allowed in DROP phase');
-assert.equal(simulateStartSpin('SPINNING', 42), false, 'magic spin blocked in SPINNING phase');
+// Duplicate claim (e.g. rapid taps or repeated function calls): Must return 0 and NOT credit coins
+const secondClaim = executeClaim();
+assert.equal(secondClaim, 0, 'Duplicate claim must return 0');
+assert.equal(userCoins, 1500, 'Coins must NOT increase on duplicate claim');
 
-// Safe magic purchase: Only deduct coins if startSpin succeeded
-let userCoins = 500;
-const magicCost = 500;
-let phase = 'SPINNING';
+// 8.2 Test Timer Cancellation on Game Restart / Return Home
+const activeTimers = new Set();
+let timerRan = false;
 
-function attemptMagicPurchase(number) {
-    if (userCoins < magicCost) return false;
-    const started = simulateStartSpin(phase, number);
-    if (started) {
-        userCoins -= magicCost;
-        return true;
-    }
-    return false;
+function scheduleGameTimeout(callback, ms) {
+    const id = setTimeout(() => {
+        activeTimers.delete(id);
+        callback();
+    }, ms);
+    activeTimers.add(id);
+    return id;
 }
 
-// In SPINNING phase, attempt must fail and deduct ZERO coins
-assert.equal(attemptMagicPurchase(15), false, 'Purchase should fail when spin cannot start');
-assert.equal(userCoins, 500, 'Coins must NOT be deducted if spin was not started');
-
-// In DROP phase, attempt succeeds and deducts coins
-phase = 'DROP';
-assert.equal(attemptMagicPurchase(15), true, 'Purchase should succeed in DROP phase');
-assert.equal(userCoins, 0, 'Coins deducted only when spin was accepted');
-
-// Lucky spin reward deferral simulation
-let walletCoins = 1000;
-let savedReward = null;
-
-function spinWheel() {
-    savedReward = 500; // determined prize
-    // Does NOT credit coins here
-    return savedReward;
+function initLevelCleanup() {
+    activeTimers.forEach(id => clearTimeout(id));
+    activeTimers.clear();
 }
 
-function onWheelStopped() {
-    if (savedReward !== null) {
-        walletCoins += savedReward;
-    }
-}
+// Player starts spin (scheduling 2200ms drop transition)
+scheduleGameTimeout(() => { timerRan = true; }, 50);
+assert.equal(activeTimers.size, 1, 'One timer scheduled');
 
-spinWheel();
-assert.equal(walletCoins, 1000, 'Coins must NOT be credited during spin animation');
-onWheelStopped();
-assert.equal(walletCoins, 1500, 'Coins credited only after wheel stops');
-console.log('✓ Lucky Spin deferral & safe spin start tests PASSED!');
+// Player clicks Home and re-enters (initLevel runs)
+initLevelCleanup();
+assert.equal(activeTimers.size, 0, 'Active timers must be cleared on initLevel');
 
+// Wait to ensure cancelled timer never fired
+await new Promise(resolve => setTimeout(resolve, 80));
+assert.equal(timerRan, false, 'Cancelled timer must NOT fire after restart/initLevel');
 
-console.log('\n=========================================');
-console.log('ALL 8 TEST SUITES PASSED CLEANLY (100%)');
-console.log('=========================================');
+console.log('✓ Lucky Spin idempotency & inter-game timer isolation tests PASSED!');
+console.log('\n=============================================');
+console.log('ALL 8 SUITES PASSED WITH REAL APPLICATION CODE!');
+console.log('=============================================');

@@ -14,7 +14,7 @@ const THEMES = [
     { header: '#8b5cf6', text: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
 ];
 
-export default function BingoCard({ card, level, getImage }) {
+export default function BingoCard({ card, getImage }) {
     if (!card || card.length === 0) return <div className="p-4 text-center">Loading...</div>;
 
     return (

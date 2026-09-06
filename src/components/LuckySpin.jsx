@@ -8,24 +8,24 @@ const PRIZE_SLICES = [
 ];
 
 export default function LuckySpin({ spinLuckySpin, claimLuckySpinReward, completeLuckySpin, reward, playTicker }) {
-    const [uiState, setUiState] = useState('IDLE'); // IDLE, SPINNING, SHOW_RESULT
+    const [uiState, setUiState] = useState(() => (reward !== null ? 'SHOW_RESULT' : 'IDLE')); // IDLE, SPINNING, SHOW_RESULT
     const [rotation, setRotation] = useState(0);
     const [displayReward, setDisplayReward] = useState(null);
 
     const wheelRef = useRef(null);
     const lastSlotRef = useRef(0);
-    // Audio handled by parent via playTicker
-
-
-    // Effect to handle the spin when specific reward is received
+    const playTickerRef = useRef(playTicker);
     useEffect(() => {
+        playTickerRef.current = playTicker;
+    }, [playTicker]);
+
+    const [prevReward, setPrevReward] = useState(reward);
+    if (prevReward !== reward) {
+        setPrevReward(reward);
         if (reward !== null && uiState === 'IDLE') {
-            // Logic handled in handleSpin usually, but if reward comes from external:
-            // This case might strictly be "re-mounting" with a reward. 
-            // If reward is already there on mount, show result immediately.
             setUiState('SHOW_RESULT');
         }
-    }, []); // On mount only
+    }
 
     // Sound effect logic
     useEffect(() => {
@@ -57,13 +57,13 @@ export default function LuckySpin({ spinLuckySpin, claimLuckySpinReward, complet
 
                     if (currentSlot !== lastSlotRef.current) {
                         // Play sound via prop with Pentatonic Pitch Variation
-                        if (playTicker) {
+                        if (playTickerRef.current) {
                             // Pentatonic C Major Intervals: 0, 2, 4, 7, 9, 12
                             const pentatonicSemitones = [0, 2, 4, 7, 9, 12];
                             const randomSemitone = pentatonicSemitones[Math.floor(Math.random() * pentatonicSemitones.length)];
                             const playbackRate = Math.pow(2, randomSemitone / 12);
 
-                            playTicker({ playbackRate });
+                            playTickerRef.current({ playbackRate });
                         }
                         lastSlotRef.current = currentSlot;
                     }

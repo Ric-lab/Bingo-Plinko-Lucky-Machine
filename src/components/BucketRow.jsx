@@ -1,7 +1,15 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 const COLS = ['L', 'U', 'C', 'K', 'Y'];
+
+const FLAME_PRESETS = {
+    1: { glowDur: 2.1, f1Dur: 0.95, f2Dur: 0.72, f3Dur: 0.48, ember1Dur: 1.05, ember1X: 2, ember2Dur: 1.25, ember2X: -3 },
+    2: { glowDur: 1.8, f1Dur: 0.88, f2Dur: 0.65, f3Dur: 0.44, ember1Dur: 0.95, ember1X: -4, ember2Dur: 1.15, ember2X: 2 },
+    3: { glowDur: 2.4, f1Dur: 1.10, f2Dur: 0.82, f3Dur: 0.54, ember1Dur: 1.20, ember1X: 3, ember2Dur: 1.35, ember2X: -2 },
+    4: { glowDur: 1.9, f1Dur: 0.82, f2Dur: 0.68, f3Dur: 0.42, ember1Dur: 1.00, ember1X: -2, ember2Dur: 1.22, ember2X: 4 },
+    5: { glowDur: 2.2, f1Dur: 1.02, f2Dur: 0.78, f3Dur: 0.50, ember1Dur: 1.10, ember1X: 4, ember2Dur: 1.18, ember2X: -3 },
+};
 
 // Rolling Slot Component
 const RollingSlot = ({ target, delay, onFinish }) => {
@@ -50,9 +58,19 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
     // Unique ID for gradients based on xOffset/scale to allow slight variations if needed, or just standard gradients
     const gradId = `fire-grad-${id}`;
 
+    const preset = FLAME_PRESETS[id] || FLAME_PRESETS[1];
+
     return (
-        <div className="absolute bottom-0" style={{ left: `${50 + xOffset}%`, transform: `translateX(-50%) scale(${scale})` }}>
-            <div className="relative w-10 h-16 flex items-end justify-center"> {/* Smaller Base Size */}
+        <div
+            className="absolute bottom-0 flex justify-center items-end pointer-events-none"
+            style={{
+                left: `calc(50% + ${xOffset}%)`,
+                transform: `scale(${scale})`,
+                transformOrigin: 'bottom center'
+            }}
+        >
+            <div className="relative w-12 h-16 flex justify-center items-end">
+                {/* Embedded SVG Defs for Local Flame Gradients */}
                 <svg width="0" height="0" className="absolute">
                     <defs>
                         <linearGradient id={`${gradId}-red`} x1="0%" y1="100%" x2="0%" y2="0%">
@@ -74,7 +92,7 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
                 {/* Individual Glow Blur */}
                 <motion.div
                     animate={{ opacity: [0.5, 0.8, 0.5], scale: [1, 1.1, 1] }}
-                    transition={{ duration: 1.5 + Math.random(), repeat: Infinity, ease: "easeInOut", delay: delay }}
+                    transition={{ duration: preset.glowDur, repeat: Infinity, ease: "easeInOut", delay: delay }}
                     className="absolute bottom-2 left-0 right-0 -translate-x-1/2 w-10 h-12 bg-orange-500/50 rounded-full blur-[15px] z-[-1]"
                 />
 
@@ -83,7 +101,7 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
                     viewBox="0 0 100 100"
                     className="absolute bottom-0 w-10 h-16 drop-shadow-sm"
                     animate={{ scaleY: [1, 1.1, 0.9, 1], scaleX: [1, 0.9, 1.1, 1], skewX: [0, 2, -2, 0] }}
-                    transition={{ duration: 0.8 + Math.random() * 0.4, repeat: Infinity, ease: "easeInOut", delay: delay }}
+                    transition={{ duration: preset.f1Dur, repeat: Infinity, ease: "easeInOut", delay: delay }}
                 >
                     <path d="M50 0 C65 40 85 50 85 80 C85 100 70 100 50 100 C30 100 15 100 15 80 C15 50 35 40 50 0 Z" fill={`url(#${gradId}-red)`} />
                 </motion.svg>
@@ -93,7 +111,7 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
                     viewBox="0 0 100 100"
                     className="absolute bottom-0 w-8 h-12"
                     animate={{ scaleY: [1, 1.15, 0.9], rotate: [-3, 3, -3] }}
-                    transition={{ duration: 0.6 + Math.random() * 0.3, repeat: Infinity, ease: "easeInOut", delay: delay + 0.1 }}
+                    transition={{ duration: preset.f2Dur, repeat: Infinity, ease: "easeInOut", delay: delay + 0.1 }}
                     style={{ originX: 0.5, originY: 1 }}
                 >
                     <path d="M50 10 C60 45 75 55 75 80 C75 95 65 95 50 95 C35 95 25 95 25 80 C25 55 40 45 50 10 Z" fill={`url(#${gradId}-orange)`} />
@@ -104,7 +122,7 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
                     viewBox="0 0 100 100"
                     className="absolute bottom-0 w-4 h-8"
                     animate={{ scale: [1, 1.3, 1] }}
-                    transition={{ duration: 0.4 + Math.random() * 0.2, repeat: Infinity, ease: "easeInOut", delay: delay }}
+                    transition={{ duration: preset.f3Dur, repeat: Infinity, ease: "easeInOut", delay: delay }}
                     style={{ originX: 0.5, originY: 1 }}
                 >
                     <path d="M50 20 C58 50 65 60 65 80 C65 90 60 95 50 95 C40 95 35 90 35 80 C35 60 42 50 50 20 Z" fill={`url(#${gradId}-yellow)`} />
@@ -112,13 +130,13 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
 
                 {/* Sparkling Embers */}
                 <motion.div
-                    animate={{ y: [0, -40], opacity: [1, 0], x: [0, Math.random() * 10 - 5] }}
-                    transition={{ duration: 0.8 + Math.random() * 0.5, repeat: Infinity, ease: "easeOut", delay: delay }}
+                    animate={{ y: [0, -40], opacity: [1, 0], x: [0, preset.ember1X] }}
+                    transition={{ duration: preset.ember1Dur, repeat: Infinity, ease: "easeOut", delay: delay }}
                     className="absolute bottom-4 left-1/2 w-0.5 h-0.5 bg-yellow-200 rounded-full shadow-[0_0_2px_rgba(255,255,255,0.8)]"
                 />
                 <motion.div
-                    animate={{ y: [0, -30], opacity: [1, 0], x: [0, Math.random() * 10 - 5] }}
-                    transition={{ duration: 1 + Math.random() * 0.5, repeat: Infinity, ease: "easeOut", delay: delay + 0.3 }}
+                    animate={{ y: [0, -30], opacity: [1, 0], x: [0, preset.ember2X] }}
+                    transition={{ duration: preset.ember2Dur, repeat: Infinity, ease: "easeOut", delay: delay + 0.3 }}
                     className="absolute bottom-2 left-1/2 w-0.5 h-0.5 bg-orange-200 rounded-full shadow-[0_0_2px_rgba(255,255,255,0.8)]"
                 />
             </div>
@@ -149,13 +167,15 @@ const DistributedFire = () => {
 export default function BucketRow({ slotsResult, bingoCard, onSlotClick, phase, fireBallActive, magicActive, playClick }) {
     // State to track which slots have finished spinning
     const [revealed, setRevealed] = useState({});
+    const [prevPhase, setPrevPhase] = useState(phase);
 
-    // Reset revealed state when spin starts (useLayoutEffect to prevent flash)
-    useLayoutEffect(() => {
+    // Reset revealed state when spin starts (during render adjustment)
+    if (prevPhase !== phase) {
+        setPrevPhase(phase);
         if (phase === 'SPINNING') {
             setRevealed({});
         }
-    }, [phase]);
+    }
 
     // Check if a number is "useful" (exists in card and not marked)
     const checkIsUseful = (num) => {

@@ -1,44 +1,9 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import Matter from 'matter-js';
-import { incrementSessionDropCount, getSessionAssistFactor } from '../utils/sessionPhysics';
+import { incrementSessionDropCount, getSessionAssistFactor } from '../utils/sessionPhysics.js';
+import { PHYSICS_CONFIG, computeFloorFallbackBin, buildStaticWorld } from '../utils/plinkoPhysics.js';
 
 const { Engine, Render, Runner, Bodies, Body, Composite, Events, Vector } = Matter;
-
-
-// ============================================================================
-// PHYSICS_CONFIG — tune the gameplay feel here. All ratios scale with screen.
-// ============================================================================
-const PHYSICS_CONFIG = {
-    // --- Ball ---
-    BALL_RADIUS_RATIO: 0.027,       // % of canvas width
-    BALL_RESTITUTION: 0.75,         // bounciness on collision (0-1)
-    BALL_FRICTION: 0.005,
-    BALL_FRICTION_AIR: 0.01,
-    BALL_DENSITY: 1.5,              // heavier mass = more momentum
-    BALL_INITIAL_X_CHAOS: 3,        // max abs horizontal velocity at drop (prevents straight fall)
-
-    // --- Pegs ---
-    PEG_RADIUS_RATIO: 0.021,        // large pegs (even rows)
-    PEG_RADIUS_SMALL_RATIO: 0.013,  // small pegs (odd rows, interleaved)
-    PEG_RESTITUTION_LARGE: 0.9,     // bouncy but loses energy
-    PEG_RESTITUTION_SMALL: 1.0,     // perfect bounce (was 1.5 — amplified energy → crazy bouncing)
-    PEG_ACTIVE_FORCE: 0.05,         // extra kick on hit (creates "relevant" direction change)
-    PEG_STEER_NUDGE: 0.006,         // subtle progressive horizontal bias vector towards target buckets
-    PEG_COLS: 7,                    // horizontal density
-
-    // --- Rows are computed dynamically — target this row-gap relative to ball ---
-    PEG_ROW_GAP_RATIO: 2.4,         // target vertical gap = this × ball diameter
-    PEG_ROWS_MIN: 10,               // short screens
-    PEG_ROWS_MAX: 16,               // tall screens
-
-    // --- Walls ---
-    WALL_RESTITUTION: 1.3,          // bouncy edges
-    WALL_KICK_X: 0.15,              // active push inward when ball touches wall
-    WALL_KICK_Y: -0.05,             // slight upward lift on wall hit
-
-    // --- World ---
-    GRAVITY_Y: 1.2,
-};
 
 const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, getImage, goldenCols = [] }, ref) => {
     const sceneRef = useRef(null);
@@ -62,6 +27,11 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
 
     // Shake State
     const [shake, setShake] = useState(false);
+
+    const getImageRef = useRef(getImage);
+    useEffect(() => {
+        getImageRef.current = getImage;
+    }, [getImage]);
 
     useEffect(() => {
         onBallLandedRef.current = onBallLanded;
@@ -167,148 +137,8 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
             });
             renderRef.current = render;
 
-            // Walls (Edges of the screen)
-            const wallThick = 60;
-            const walls = [
-                Bodies.rectangle(-wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-left', friction: 0, restitution: PHYSICS_CONFIG.WALL_RESTITUTION }),
-                Bodies.rectangle(width + wallThick / 2, height / 2, wallThick, height * 2, { isStatic: true, label: 'wall-right', friction: 0, restitution: PHYSICS_CONFIG.WALL_RESTITUTION }),
-                Bodies.rectangle(width / 2, height + 25, width, 50, { isStatic: true, label: 'floor' })
-            ];
-            Composite.add(engine.world, walls);
-
-            // Pegs (Aligned Grid)
-            const pegRadius = width * PHYSICS_CONFIG.PEG_RADIUS_RATIO;
-            const pegRadiusSmall = width * PHYSICS_CONFIG.PEG_RADIUS_SMALL_RATIO;
-
-            // DYNAMIC ROWS — scale with screen height so vertical gap stays consistent across devices.
-            // Target gap = ball diameter × PEG_ROW_GAP_RATIO. Clamped between MIN/MAX.
-            const startY = 25;
-            const endY = height - 100;
-            const ballDiameter = width * PHYSICS_CONFIG.BALL_RADIUS_RATIO * 2;
-            const targetGapY = ballDiameter * PHYSICS_CONFIG.PEG_ROW_GAP_RATIO;
-            const computedRows = Math.floor((endY - startY) / targetGapY) + 1;
-            const rows = Math.max(PHYSICS_CONFIG.PEG_ROWS_MIN, Math.min(PHYSICS_CONFIG.PEG_ROWS_MAX, computedRows));
-            const gapY = (endY - startY) / (rows - 1);
-
-            // Unit Width
-            const TOTAL_BINS = 5;
-            const binW = width / TOTAL_BINS;
-            const PEG_COLS = PHYSICS_CONFIG.PEG_COLS;
-            const pegSpacing = width / PEG_COLS;
-
-            for (let r = 0; r < rows; r++) {
-                const isEven = (r % 2 === 0);
-
-                // Row Logic:
-                // Grid driven by PEG_COLS (7), not BINS (5).
-
-                if (isEven) {
-                    // EDGE ALIGNED (0 to PEG_COLS)
-                    for (let c = 0; c <= PEG_COLS; c++) {
-                        const px = c * pegSpacing;
-
-                        const peg = Bodies.circle(px, startY + (r * gapY), pegRadius, {
-                            isStatic: true,
-                            render: {
-                                sprite: {
-                                    texture: getImage('peg.png'),
-                                    xScale: (pegRadius * 2) / 64, // Assume 64px image
-                                    yScale: (pegRadius * 2) / 64
-                                }
-                            },
-                            restitution: PHYSICS_CONFIG.PEG_RESTITUTION_LARGE,
-                            label: 'peg'
-                        });
-                        Composite.add(engine.world, peg);
-                    }
-                } else {
-                    // CENTER ALIGNED
-                    for (let c = 0; c < PEG_COLS; c++) {
-                        const px = (c * pegSpacing) + (pegSpacing / 2);
-
-                        const peg = Bodies.circle(px, startY + (r * gapY), pegRadiusSmall, {
-                            isStatic: true,
-                            render: {
-                                sprite: {
-                                    texture: getImage('peg.png'),
-                                    xScale: (pegRadiusSmall * 2) / 64,
-                                    yScale: (pegRadiusSmall * 2) / 64
-                                }
-                            },
-                            restitution: PHYSICS_CONFIG.PEG_RESTITUTION_SMALL,
-                            label: 'peg'
-                        });
-                        Composite.add(engine.world, peg);
-                    }
-                }
-            }
-
-            // Physical Separators & Sensors
-            // These must MATCH THE VISUAL BUCKETS (5 Cols)
-
-            for (let i = 0; i < TOTAL_BINS; i++) {
-                // i = 0..4
-                const x = i * binW; // Left edge of this bin
-
-                // Separators (Walls/Funnels between columns)
-                // NOW INCLUDING EDGES (i=0 to 5) to handle "side gaps"
-                // We want funnels at: 0*W (Left), 1*W, 2*W, 3*W, 4*W, 5*W (Right)
-                // But the loop is 0..4 (5 cols).
-                // We can add the Left funnel on i=0. The Right funnel triggers on i=4 (at x+binW).
-
-                const funnelHeight = 90; // Normalized height
-
-                const internalOptions = {
-                    isStatic: true,
-                    friction: 0,
-                    frictionStatic: 0,
-                    render: {
-                        sprite: {
-                            texture: getImage('triangle.png'),
-                            xScale: 40 / 80, // Target 40px width. Adjust if image is not 80px.
-                            yScale: 90 / 180 // Target 90px height. Adjust if image is not 180px.
-                        }
-                    },
-                    label: 'funnel-internal',
-                    restitution: 0.5 // Bouncy tip
-                };
-
-
-
-                // 1. Funnel on the LEFT of the current bin (at x)
-                // This covers:
-                // i=0: Left Wall (x=0)
-                // i=1..4: Internal Dividers
-                Composite.add(engine.world, Bodies.trapezoid(x, height - 20, 40, funnelHeight, 1, internalOptions));
-
-                // 2. Funnel on the RIGHT of the LAST bin (at x + binW)
-                // This covers: Right Wall (x=width)
-                if (i === 4) {
-                    Composite.add(engine.world, Bodies.trapezoid(x + binW, height - 20, 40, funnelHeight, 1, internalOptions));
-                }
-
-                // (Ramp logic removed - replaced by Trapezoids above)
-
-                // Sensor (The Trigger) - LARGE CATCHER
-                // Position: Centered lower to ensure capture.
-                // extending from roughly the bottom of the visible pipe down.
-                const pipeX = x + binW / 2;
-                const sensorHeight = 10; // Thin sensor at the very bottom
-                const sensorY = height - 20; // Trigger slightly earlier (was -5)
-
-                // CRITICAL FIX: Make Sensor FULL WIDTH of the bin
-                // Using binW + 2 to slight overlap
-                const sensor = Bodies.rectangle(pipeX, sensorY, binW + 2, sensorHeight, {
-                    isStatic: true,
-                    isSensor: true, // Specific trigger
-                    label: `bin-${i}`, // Encodes the Index: 0, 1, 2, 3, 4
-                    render: {
-                        visible: false, // Debug: set true to see sensor
-                        fillStyle: 'red' // visible for debug
-                    }
-                });
-                Composite.add(engine.world, sensor);
-            }
+            // Build static physical world (walls, floor, pegs, funnels, sensors)
+            buildStaticWorld(engine, width, height, getImageRef.current);
 
             // Collision Event
             Events.on(engine, 'collisionStart', (evt) => {
@@ -452,8 +282,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                         if (!processedBalls.current.has(ball.id)) {
                             processedBalls.current.add(ball.id);
                             const canvasW = renderRef.current?.options?.width || sceneRef.current?.clientWidth || width || 360;
-                            const binW = canvasW / 5;
-                            const fallbackBinIdx = Math.max(0, Math.min(4, Math.floor(ball.position.x / binW)));
+                            const fallbackBinIdx = computeFloorFallbackBin(ball.position.x, canvasW);
                             if (onBallLandedRef.current) {
                                 onBallLandedRef.current(fallbackBinIdx, ball.label === 'fireball');
                             }
@@ -617,8 +446,9 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
         }, 100); // 100ms delay for layout stability
 
         // Handle screen resize & orientation change dynamically
+        let resizeTimer = null;
         const handleResize = () => {
-            if (!sceneRef.current || !renderRef.current) return;
+            if (!sceneRef.current || !renderRef.current || !engineRef.current) return;
             const newWidth = sceneRef.current.clientWidth;
             const newHeight = sceneRef.current.clientHeight;
             if (newWidth > 0 && newHeight > 0) {
@@ -630,14 +460,22 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                     renderRef.current.canvas.style.width = `${newWidth}px`;
                     renderRef.current.canvas.style.height = `${newHeight}px`;
                 }
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    if (engineRef.current) {
+                        buildStaticWorld(engineRef.current, newWidth, newHeight, getImageRef.current);
+                    }
+                }, 100);
             }
         };
         window.addEventListener('resize', handleResize);
         window.addEventListener('orientationchange', handleResize);
 
         // Cleanup
+        const balls = processedBalls.current;
         return () => {
             clearTimeout(timer);
+            clearTimeout(resizeTimer);
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('orientationchange', handleResize);
             if (runnerRef.current) {
@@ -649,7 +487,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                 if (renderRef.current.canvas) renderRef.current.canvas.remove();
             }
             if (engineRef.current) Engine.clear(engineRef.current);
-            processedBalls.current.clear();
+            balls.clear();
         };
     }, []);
 

@@ -1,48 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { calculateProbabilities, pickNonAdjacentColumns } from '../utils/mathUtils';
-import { loadJSON, saveJSON } from '../utils/storage';
+import { calculateProbabilities, pickNonAdjacentColumns } from '../utils/mathUtils.js';
+import { loadJSON, saveJSON } from '../utils/storage.js';
 
 const STORAGE_KEY = 'bplm.gameLogic.v1';
 
 const COLS = ['B', 'I', 'N', 'G', 'O'];
 
-const getLevelRanges = (level) => {
-    // 1. HARD: Multiples of 5 (e.g. 5, 10, 15...) -> Range 20
-    // Total 100 numbers (approx), O goes to 99.
-    if (level % 5 === 0) {
-        return {
-            'B': [1, 20],
-            'I': [21, 40],
-            'N': [41, 60],
-            'G': [61, 80],
-            'O': [81, 99]
-        };
-    }
-
-    // 2. MEDIUM: Even Levels (e.g. 2, 4, 6...) -> Range 15 (Standard Bingo)
-    // Total 75 numbers
-    if (level % 2 === 0) {
-        return {
-            'B': [1, 15],
-            'I': [16, 30],
-            'N': [31, 45],
-            'G': [46, 60],
-            'O': [61, 75]
-        };
-    }
-
-    // 3. EASY: Odd Levels (e.g. 1, 3, 7...) -> Range 10
-    // Total 50 numbers
-    return {
-        'B': [1, 10],
-        'I': [11, 20],
-        'N': [21, 30],
-        'G': [31, 40],
-        'O': [41, 50]
-    };
-};
-
-const MODE_CONFIG = {
+export const MODE_CONFIG = {
     'FINGO': {
         balls: 50,
         centerFree: true,
@@ -60,21 +24,47 @@ const MODE_CONFIG = {
     }
 };
 
+export const getLevelRanges = (level) => {
+    if (level % 5 === 0) {
+        return {
+            'B': [1, 20],
+            'I': [21, 40],
+            'N': [41, 60],
+            'G': [61, 80],
+            'O': [81, 99]
+        };
+    }
+
+    if (level % 2 === 0) {
+        return {
+            'B': [1, 15],
+            'I': [16, 30],
+            'N': [31, 45],
+            'G': [46, 60],
+            'O': [61, 75]
+        };
+    }
+
+    return {
+        'B': [1, 10],
+        'I': [11, 20],
+        'N': [21, 30],
+        'G': [31, 40],
+        'O': [41, 50]
+    };
+};
+
 // --- WIN CHECK FUNCTIONS ---
 
-// MODO A (Fingo) - 5 em Linha/Diagonal
-function checkLineMatch(card) {
-    // 1. Rows
+export function checkLineMatch(card) {
     for (let r = 0; r < 5; r++) {
         const rowCells = card.filter(c => c.row === r);
         if (rowCells.every(c => c.marked)) return true;
     }
-    // 2. Columns
     for (let c = 0; c < 5; c++) {
         const colCells = card.filter(cell => cell.col === c);
         if (colCells.every(c => c.marked)) return true;
     }
-    // 3. Diagonals
     const diag1 = [0, 1, 2, 3, 4].map(i => card.find(c => c.col === i && c.row === i));
     if (diag1.every(c => c.marked)) return true;
 
@@ -84,16 +74,18 @@ function checkLineMatch(card) {
     return false;
 }
 
-// MODO B (Bingo) - Blackout / Cartela Cheia
-function checkFullCard(card) {
-    // Check if ALL cells are marked
+export function checkFullCard(card) {
     return card.every(c => c.marked);
 }
 
-// MODO C (Spingo) - Qualquer 5 números marcados (pelo jogador)
-function checkAnyFive(card) {
+export function checkAnyFive(card) {
     const markedCount = card.filter(c => c.marked).length;
     return markedCount >= 5;
+}
+
+export function calculateWinReward(mode, level) {
+    const modeConf = MODE_CONFIG[mode];
+    return (modeConf?.baseReward || 100) + level;
 }
 
 // --- HELPERS ---
@@ -163,8 +155,34 @@ export function useGameLogic(gameMode = 'FINGO') {
     // Config for Current Mode
     const config = MODE_CONFIG[gameMode || 'FINGO'];
 
+    // Manage active timers to isolate games and prevent race conditions on restarts
+    const timersRef = useRef(new Set());
+    const safeTimeout = useCallback((fn, delay) => {
+        const id = setTimeout(() => {
+            timersRef.current.delete(id);
+            fn();
+        }, delay);
+        timersRef.current.add(id);
+        return id;
+    }, []);
+
+    const clearAllTimers = useCallback(() => {
+        timersRef.current.forEach(id => clearTimeout(id));
+        timersRef.current.clear();
+    }, []);
+
+    // Clean timers on unmount
+    useEffect(() => {
+        return () => {
+            clearAllTimers();
+        };
+    }, [clearAllTimers]);
+
     // --- INITIALIZATION ---
     const initLevel = useCallback(() => {
+        // Cancel all pending timeouts from any previous round
+        clearAllTimers();
+
         // Use currentLevel derived from state
         const lvl = levels[gameMode || 'FINGO'];
 
@@ -225,7 +243,7 @@ export function useGameLogic(gameMode = 'FINGO') {
         setFireBallActive(false);
         setMagicActive(false);
 
-    }, [gameMode, levels, config]); // Re-init if mode or level changes
+    }, [clearAllTimers, config, gameMode, levels]); // Re-init if mode or level changes
 
     // Init on Mount (and when mode changes)
     useEffect(() => {
@@ -273,10 +291,12 @@ export function useGameLogic(gameMode = 'FINGO') {
     };
 
     const claimLuckySpinReward = (rewardAmount) => {
+        // IDEMPOTENT: If already claimed or no reward active, do nothing
+        if (luckySpinReward === null) return 0;
         const finalReward = typeof rewardAmount === 'number' ? rewardAmount : luckySpinReward;
-        if (finalReward && typeof finalReward === 'number') {
-            setCoins(prev => prev + finalReward);
-        }
+        setLuckySpinReward(null); // Consumed immediately
+        setCoins(prev => prev + finalReward);
+        return finalReward;
     };
 
     const completeLuckySpin = () => {
@@ -348,7 +368,7 @@ export function useGameLogic(gameMode = 'FINGO') {
         }
 
         setSlotsResult(newSlots);
-        setTimeout(() => setPhase('DROP'), 2200);
+        safeTimeout(() => setPhase('DROP'), 2200);
         return true;
     };
 
@@ -391,7 +411,7 @@ export function useGameLogic(gameMode = 'FINGO') {
 
             if (checkResult) {
                 // VICTORY
-                setTimeout(() => {
+                safeTimeout(() => {
                     setWinState(true);
                     setIsGameOver(true);
                     setPhase('VICTORY');
@@ -404,7 +424,7 @@ export function useGameLogic(gameMode = 'FINGO') {
             } else {
                 // NO Win yet
                 if (balls <= 0) {
-                    setTimeout(() => {
+                    safeTimeout(() => {
                         setIsGameOver(true);
                         setPhase('GAME_OVER');
                     }, 750);
@@ -416,7 +436,7 @@ export function useGameLogic(gameMode = 'FINGO') {
         } else {
             if (balls <= 0) {
                 if (!winState) {
-                    setTimeout(() => {
+                    safeTimeout(() => {
                         setIsGameOver(true);
                         setPhase('GAME_OVER');
                     }, 750);

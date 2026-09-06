@@ -10,19 +10,20 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
     // Update ref when options change
     useEffect(() => {
         optionsRef.current = options;
-    }, [options.volume, options.loop, options.multi]);
+    }, [options]);
 
     useEffect(() => {
         // Initialize main audio (Only when SRC changes)
-        audioRef.current = new Audio(src);
+        const audio = new Audio(src);
+        audioRef.current = audio;
 
         // Apply initial settings
-        audioRef.current.volume = options.volume;
-        audioRef.current.loop = options.loop;
+        audio.volume = optionsRef.current?.volume ?? 1.0;
+        audio.loop = optionsRef.current?.loop ?? false;
 
         return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
+            audio.pause();
+            if (audioRef.current === audio) {
                 audioRef.current = null;
             }
             // Cleanup pool
