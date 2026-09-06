@@ -27,9 +27,9 @@ Every 25 levels triggers a Lucky Spin bonus wheel.
 - `src/hooks/useGameLogic.js` — game state machine, win checks, rewards
 - `src/hooks/useTheme.js` — skin/asset resolution
 - `src/components/GameCanvas.jsx` — Matter.js physics + render loop
-- `src/components/Modal/` — Magic, Fireball, Shop, Game Over, Next Level, Lucky Spin
-- `public/Images/<skin>/` — themeable image assets (Standard, Ocean, …)
-- `public/Audio/<skin>/` — themeable sound assets
+- `src/components/Modal/` — Magic, Fireball, Game Over, Next Level, Message
+- `public/Images/Standard/` — game image assets
+- `public/Audio/Standard/` — game sound assets
 - `public/Images/Immutable/`, `public/Audio/Immutable/` — assets shared across skins
 - `android/` — Capacitor Android shell
 
