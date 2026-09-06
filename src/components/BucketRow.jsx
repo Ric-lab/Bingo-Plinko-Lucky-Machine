@@ -61,15 +61,8 @@ const FlameUnit = ({ delay, scale, xOffset, id }) => {
     const preset = FLAME_PRESETS[id] || FLAME_PRESETS[1];
 
     return (
-        <div
-            className="absolute bottom-0 flex justify-center items-end pointer-events-none"
-            style={{
-                left: `calc(50% + ${xOffset}%)`,
-                transform: `scale(${scale})`,
-                transformOrigin: 'bottom center'
-            }}
-        >
-            <div className="relative w-12 h-16 flex justify-center items-end">
+        <div className="absolute bottom-0" style={{ left: `${50 + xOffset}%`, transform: `translateX(-50%) scale(${scale})` }}>
+            <div className="relative w-10 h-16 flex items-end justify-center"> {/* Smaller Base Size */}
                 {/* Embedded SVG Defs for Local Flame Gradients */}
                 <svg width="0" height="0" className="absolute">
                     <defs>
