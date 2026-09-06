@@ -1,6 +1,6 @@
 import Matter from 'matter-js';
 
-const { Bodies, Composite } = Matter;
+const { Bodies, Body, Composite } = Matter;
 
 // ============================================================================
 // PHYSICS_CONFIG — tune the gameplay feel here. All ratios scale with screen.
@@ -44,6 +44,33 @@ export const PHYSICS_CONFIG = {
 export function computeFloorFallbackBin(ballX, canvasWidth = 360) {
     const binW = canvasWidth / 5;
     return Math.max(0, Math.min(4, Math.floor(ballX / binW)));
+}
+
+/** Resize the world and keep falling balls inside the new playable area. */
+export function resizeWorld(engine, oldWidth, oldHeight, width, height, getImage) {
+    if (!engine?.world || oldWidth <= 0 || oldHeight <= 0 || width <= 0 || height <= 0) return;
+    const scaleX = width / oldWidth;
+    const scaleY = height / oldHeight;
+    for (const ball of Composite.allBodies(engine.world)) {
+        if (ball.label !== 'player-ball' && ball.label !== 'fireball') continue;
+        const x = ball.position.x * scaleX;
+        const y = ball.position.y * scaleY;
+        const velocity = { x: ball.velocity.x * scaleX, y: ball.velocity.y * scaleY };
+        Body.scale(ball, scaleX, scaleX);
+        if (ball.render.sprite) {
+            ball.render.sprite.xScale *= scaleX;
+            ball.render.sprite.yScale *= scaleX;
+        }
+        const radius = ball.circleRadius;
+        Body.setPosition(ball, {
+            x: Math.max(radius + 1, Math.min(width - radius - 1, x)),
+            // Keep the ball above the sensor even if it passed the old floor
+            // during the resize debounce. Collision resolution still owns scoring.
+            y: Math.min(y, height - 20 - radius - 6),
+        });
+        Body.setVelocity(ball, velocity);
+    }
+    buildStaticWorld(engine, width, height, getImage);
 }
 
 /**

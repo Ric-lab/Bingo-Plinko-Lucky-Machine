@@ -1,140 +1,121 @@
-# Arquitetura Atual
+# Arquitetura atual
 
-Status de validação da revisão:
-- **Testes Automatizados (Node.js)**: 8 suítes em `test-fingo-physics.mjs` cobrindo assistência de pinos, probabilidades, regra de vitória por modo, física de colisão, fallback de chão, reconstrução estática no resize, idempotência da roleta e isolamento de temporizadores — **100% aprovado (8 de 8)** com funções e configurações reais importadas de `src/hooks/useGameLogic.js` e `src/utils/plinkoPhysics.js`.
-- **ESLint**: `npm run lint` — **0 erros, 0 avisos (aprovado)**.
-- **Build de Produção**: `npm run build` via Vite v7 — **compilação concluída com sucesso**.
-- **Sincronização Android Capacitor**: `npx cap sync android` — **assets sincronizados em android/app/src/main/assets/public**.
-- **Execução em Hardware Android**: Código estruturado com `MainActivity.java` e `@capacitor/preferences`, pendente de validação manual direta em dispositivo físico.
+## 1. Visão em 5 linhas
 
----
+1. App de bingo com cartela 5×5 e Plinko: o índice do cesto escolhe o número resolvido na cartela (`src/hooks/useGameLogic.js:185`; `src/App.jsx:215`).
+2. FINGO usa linha/coluna/diagonal e 50 bolas; BINGO exige cartela cheia e usa 100; SPINGO exige cinco marcações e usa 25 (`src/hooks/useGameLogic.js:9`; `src/hooks/useGameLogic.js:417`).
+3. React 19, Vite 7, Tailwind 3, Matter.js 0.20, Framer Motion e Capacitor 8; entrada em StrictMode (`package.json:15`; `package.json:27`; `src/main.jsx:7`).
+4. Scripts dev/build iniciam Vite e compilam; build:android compila e sincroniza o diretório dist pelo Capacitor (`package.json:8`; `package.json:12`; `capacitor.config.json:4`).
+5. Android usa com.bingoplinko.game e MainActivity estende BridgeActivity, liberando mídia sem gesto na WebView em onCreate/onResume; execução em aparelho: não verificado (`capacitor.config.json:2`; `android/app/src/main/java/com/bingoplinko/game/MainActivity.java:6`).
 
-## 1. Visão em 5 Linhas
+## 2. Mapa de arquivos
 
-1. Jogo de cartela 5×5 com sorteio de cinco números e queda física de bolas no Plinko: o cesto atingido determina a coluna resolvida na cartela (`src/hooks/useGameLogic.js:155-251`; `src/App.jsx:208-233`).
-2. Três modos de jogo: FINGO (linha/coluna/diagonal, 50 bolas), BINGO (cartela cheia/blackout, 100 bolas) e SPINGO (quaisquer 5 números marcados, 25 bolas) (`src/hooks/useGameLogic.js:9-86`).
-3. Stack: React 19, Vite 7, Tailwind 3, Matter.js 0.20, Framer Motion, Lucide, canvas-confetti e Capacitor 8 (`package.json:14-38`); `main.jsx` monta `App` em `StrictMode` (`src/main.jsx:1-11`).
-4. Scripts: `npm run dev` inicia o servidor de desenvolvimento; `npm run build` compila o pacote de produção; `build:android` executa build e sincronização do Capacitor (`package.json:6-13`; `capacitor.config.json:1-6`).
-5. Android: `.MainActivity` herda de `BridgeActivity`, dispensa gesto prévio para reprodução de mídia em `onCreate`/`onResume` e opera sob o namespace `com.bingoplinko.game` (`android/app/src/main/AndroidManifest.xml:1-26`; `android/app/src/main/java/com/bingoplinko/game/MainActivity.java:1-21`).
-
----
-
-## 2. Mapa de Arquivos
-
-| Arquivo em `src/` | Responsabilidade atual e referência |
+| Arquivo em src/ | Responsabilidade e ponto de entrada |
 | --- | --- |
-| `main.jsx` | Ponto de entrada; carrega CSS global e monta a raiz React com `StrictMode` (`src/main.jsx:1-11`). |
-| `App.jsx` | Orquestrador principal; gerencia telas (Home vs. Game), áudio global/BGM, modais e ponte React-Matter (`src/App.jsx:1-450`). |
-| `index.css` | Diretivas Tailwind, utilitários visuais, keyframes de animação e regras de layout/toque (`src/index.css:1-267`). |
-| `hooks/useGameLogic.js` | Estado central do jogo: cartela, bolas, moedas, fases, poderes, win checks, timers seguros e níveis (`src/hooks/useGameLogic.js:1-505`). |
-| `hooks/useTheme.js` | Resolução de caminhos estáticos para imagens e áudio sob skin `Standard` e pasta `Immutable` (`src/hooks/useTheme.js:1-17`). |
-| `hooks/useSound.js` | Gerenciamento de áudio HTML5: instâncias, volume dinâmico, loop, pooling de sobreposição e cleanup (`src/hooks/useSound.js:1-107`). |
-| `utils/plinkoPhysics.js` | Constantes físicas (`PHYSICS_CONFIG`), gerador dinâmico do mundo estático (`buildStaticWorld`) e fallback de cesto (`src/utils/plinkoPhysics.js:1-182`). |
-| `utils/sessionPhysics.js` | Rastreamento de bolas lançadas na sessão e curva progressiva de assistência para os pinos (`src/utils/sessionPhysics.js:1-94`). |
-| `utils/mathUtils.js` | Interpolação de probabilidades por nível e sorteio de colunas premiadas não adjacentes (`src/utils/mathUtils.js:1-97`). |
-| `utils/storage.js` | Camada de persistência assíncrona sobre `@capacitor/preferences` com fallback transparente para localStorage (`src/utils/storage.js:1-22`). |
-| `components/GameCanvas.jsx` | Canvas Matter.js: renderizador, ciclo de vida da simulação, disparo de bolas, partículas e resize dinâmico (`src/components/GameCanvas.jsx:1-500`). |
-| `components/BingoCard.jsx` | Renderização visual da cartela 5×5, células marcadas, centro FREE e cabeçalhos de coluna (`src/components/BingoCard.jsx:1-106`). |
-| `components/BucketRow.jsx` | Cestos inferiores numerados com efeito de chamas determinístico e slots giratórios (`src/components/BucketRow.jsx:1-255`). |
-| `components/Footer.jsx` | Controles de jogada: botões de Spin, Fireball e Magic Number com indicação de bolas (`src/components/Footer.jsx:1-76`). |
-| `components/Header.jsx` | Cabeçalho: saldo de moedas, nível atual por modo e botão de abertura do menu lateral (`src/components/Header.jsx:1-53`). |
-| `components/SideMenu.jsx` | Menu lateral com ajustes de volume (música, efeitos, vibração) e botão de retorno à tela inicial (`src/components/SideMenu.jsx:1-143`). |
-| `components/LuckySpin.jsx` | Minijogo de roleta bônus a cada 25 níveis, desaceleração com áudio pentatônico e crédito idempotente (`src/components/LuckySpin.jsx:1-228`). |
-| `components/Modal/ConfirmationModal.jsx` | Modal genérico de confirmação para compra de poderes ou continuação de partida (`src/components/Modal/ConfirmationModal.jsx:1-111`). |
-| `components/Modal/ConfirmationReward.jsx` | Notificação de recompensa concedida com tema verde e ação de fechamento (`src/components/Modal/ConfirmationReward.jsx:1-42`). |
-| `components/Modal/FireballModal.jsx` | Diálogo de aquisição da bola de fogo (moedas ou recompensa de vídeo simulado) (`src/components/Modal/FireballModal.jsx:1-79`). |
-| `components/Modal/GameOverModal.jsx` | Tela de derrota: opções de compra de +10 bolas ou reinício da fase (`src/components/Modal/GameOverModal.jsx:1-75`). |
-| `components/Modal/MagicNumberModal.jsx` | Diálogo de escolha de número desejado na cartela para sorteio forçado (`src/components/Modal/MagicNumberModal.jsx:1-163`). |
-| `components/Modal/MessageModal.jsx` | Toasts de feedback de turno e modal de celebração com animação de confete isolada (`src/components/Modal/MessageModal.jsx:1-188`). |
-| `components/Modal/NextLevelModal.jsx` | Tela de vitória com recompensa do modo e botão de avanço para a próxima fase (`src/components/Modal/NextLevelModal.jsx:1-64`). |
+| main.jsx | Monta App em StrictMode e importa o CSS global. (`src/main.jsx:6`) |
+| App.jsx | Compõe Home, jogo, áudio, menu, modais e callbacks entre lógica e canvas. (`src/App.jsx:22`) |
+| index.css | Estilos globais, diretivas Tailwind, animações e regras de toque. (`src/index.css:1`) |
+| hooks/useGameLogic.js | Estado da partida, persistência de saldo/níveis, sorteios, compras e condições de vitória. (`src/hooks/useGameLogic.js:106`) |
+| hooks/useTheme.js | Monta URLs de imagens e sons da skin Standard ou de Immutable. (`src/hooks/useTheme.js:3`) |
+| hooks/useSound.js | Instâncias Audio, reprodução, volume, loop e pool para sons sobrepostos. (`src/hooks/useSound.js:3`) |
+| utils/plinkoPhysics.js | Configuração, construção dos corpos estáticos, resize das bolas e cálculo do cesto pelo x. (`src/utils/plinkoPhysics.js:8`) |
+| utils/sessionPhysics.js | Contador de lançamentos em sessionStorage/memória e fator de assistência. (`src/utils/sessionPhysics.js:20`) |
+| utils/mathUtils.js | Probabilidades por nível e escolha de combinações de colunas não adjacentes. (`src/utils/mathUtils.js:30`) |
+| utils/storage.js | Leitura/escrita JSON via Preferences; leitura falha retorna null e escrita falha é ignorada. (`src/utils/storage.js:6`) |
+| components/GameCanvas.jsx | Engine/Runner/Render, lançamento, colisões, partículas, vibração e resize. (`src/components/GameCanvas.jsx:8`) |
+| components/BingoCard.jsx | Cartela DOM, cabeçalhos LUCKY, números, marcações e FREE. (`src/components/BingoCard.jsx:17`) |
+| components/BucketRow.jsx | Cinco alvos clicáveis, números animados, destaque útil e chamas. (`src/components/BucketRow.jsx:167`) |
+| components/Footer.jsx | Botões Spin/Fireball/Magic e contador de bolas, habilitados conforme a fase. (`src/components/Footer.jsx:3`) |
+| components/Header.jsx | Saldo, balão de nível e abertura do menu. (`src/components/Header.jsx:4`) |
+| components/SideMenu.jsx | Ajustes de música/efeitos/vibração, retorno à Home e fechamento do menu. (`src/components/SideMenu.jsx:4`) |
+| components/LuckySpin.jsx | Rotação da roleta, ticker, espera de oito segundos, crédito e botão Continuar. (`src/components/LuckySpin.jsx:10`) |
+| components/Modal/ConfirmationModal.jsx | Diálogo reutilizável com confirmar, fechar e ação secundária. (`src/components/Modal/ConfirmationModal.jsx:4`) |
+| components/Modal/ConfirmationReward.jsx | Exibe recompensa concedida e ação de fechamento. (`src/components/Modal/ConfirmationReward.jsx:4`) |
+| components/Modal/FireballModal.jsx | Compra Fireball ou agenda concessão gratuita por vídeo simulado. (`src/components/Modal/FireballModal.jsx:6`) |
+| components/Modal/GameOverModal.jsx | Continuação paga/gratuita com dez bolas ou reinício. (`src/components/Modal/GameOverModal.jsx:3`) |
+| components/Modal/MagicNumberModal.jsx | Seleciona célula não marcada e solicita sorteio pago/gratuito do número. (`src/components/Modal/MagicNumberModal.jsx:5`) |
+| components/Modal/MessageModal.jsx | Mensagens por tipo; CelebrationContent mantém canvas e efeito de confete. (`src/components/Modal/MessageModal.jsx:5`) |
+| components/Modal/NextLevelModal.jsx | Exibe prêmio, toca áudio de vitória e chama avanço de nível. (`src/components/Modal/NextLevelModal.jsx:3`) |
 
----
+## 3. Fluxo de uma partida
 
-## 3. Fluxo de uma Partida
+1. Callback da Home em App seleciona o modo e gameStarted; selecionar o mesmo modo chama initLevel diretamente (`src/App.jsx:262`; `src/App.jsx:278`; `src/App.jsx:294`).
+2. useGameLogic.initLevel cancela seus timers, descarta prêmio pendente, gera cartela com getLevelRanges e reinicia bolas, slots, poderes e fase SPIN; efeito chama initLevel quando sua identidade muda (`src/hooks/useGameLogic.js:185`; `src/hooks/useGameLogic.js:257`).
+3. Footer.onSpin passa por App e chama useGameLogic.startSpin: SPIN → SPINNING, sorteia slots e agenda DROP em 2200 ms; Magic pode iniciar também a partir de DROP (`src/App.jsx:373`; `src/hooks/useGameLogic.js:320`; `src/hooks/useGameLogic.js:380`).
+4. BucketRow.RollingSlot anima até target e sinaliza revelação; os cinco atrasos são 300 + i×400 ms, mais 200 ms para onFinish (`src/components/BucketRow.jsx:15`; `src/components/BucketRow.jsx:240`).
+5. BucketRow.onClick chama App.handleSlotClick somente em DROP; App verifica bolas e pede GameCanvas.dropBall via ref. Só após retorno true chama useGameLogic.dropBall, que desconta uma bola e entra em RESOLVE (`src/components/BucketRow.jsx:211`; `src/App.jsx:178`; `src/components/GameCanvas.jsx:50`; `src/hooks/useGameLogic.js:384`).
+6. GameCanvas.dropBall cria Bodies.circle e adiciona ao mundo; Runner avança a física. collisionStart aplica impulsos nos pinos/paredes e assistência às bolas normais em direção às goldenCols (`src/components/GameCanvas.jsx:77`; `src/components/GameCanvas.jsx:443`; `src/components/GameCanvas.jsx:144`).
+7. collisionStart registra ball.id em processedBalls antes de chamar onBallLandedRef com binIdx. No chão sem sensor, computeFloorFallbackBin calcula/clampa o índice por x (`src/components/GameCanvas.jsx:237`; `src/components/GameCanvas.jsx:285`; `src/utils/plinkoPhysics.js:44`).
+8. App.handleBallLanded obtém slotsResult[binIndex] e chama useGameLogic.resolveTurn; acerto marca a célula e credita cinco moedas. O retorno com hit/earned/hasBingo/isDefeat orienta mensagem e som (`src/App.jsx:208`; `src/hooks/useGameLogic.js:391`; `src/hooks/useGameLogic.js:413`).
+9. resolveTurn agenda VICTORY/prêmio em 1100 ms, derrota GAME_OVER em 750 ms ou retorna SPIN quando há bolas; calculateWinReward soma baseReward do modo ao nível (`src/hooks/useGameLogic.js:421`; `src/hooks/useGameLogic.js:86`).
+10. nextLevel abre BONUS_WHEEL em níveis múltiplos de 25. LuckySpin.handleSpin sorteia/alinha a roda; após 8000 ms chama claimLuckySpinReward, que consome a ref uma vez. completeLuckySpin incrementa o nível do modo (`src/hooks/useGameLogic.js:261`; `src/components/LuckySpin.jsx:78`; `src/hooks/useGameLogic.js:301`; `src/hooks/useGameLogic.js:310`).
 
-1. **Início pela Home**: O jogador clica em FINGO, BINGO ou SPINGO na Home (`src/App.jsx:258-296`). O estado `gameStarted` vai para `true`. Se o modo já estava selecionado, `initLevel()` é invocado explicitamente, cancelando timers pendentes da partida anterior e sorteando nova cartela.
-2. **Geração da Cartela**: `initLevel()` consulta `getLevelRanges(level)`, gera números aleatórios sem repetição para cada coluna, define a célula central (FREE nos modos FINGO e BINGO; número comum no SPINGO), reinicia a cota de bolas e define a fase como `SPIN` (`src/hooks/useGameLogic.js:155-251`).
-3. **Acionamento do Sorteio**: O jogador clica em SPIN no rodapé. O callback valida a fase `SPIN`, ativa a fase transitória `SPINNING`, sorteia os 5 números com auxílio de `calculateProbabilities` e `pickNonAdjacentColumns`, e agenda a transição para `DROP` em 2200 ms via `safeTimeout` (`src/hooks/useGameLogic.js:342-378`).
-4. **Animação dos Cestos**: Durante `SPINNING`, os slots dos cestos realizam rolagem numérica até travar nos valores sorteados (`src/components/BucketRow.jsx:7-46`).
-5. **Lançamento Físico**: Na fase `DROP`, o jogador seleciona uma das 5 colunas no cesto. `App.handleSlotClick` chama `canvasRef.current.dropBall()`. A bola só é debitada do saldo do jogador se o motor físico confirmar a criação do corpo (`src/App.jsx:178-193`).
-6. **Simulação e Queda no Plinko**: A bola colide com paredes e pinos. Se for uma bola normal, o sistema aplica um vetor suave de assistência em direção a colunas úteis com base no histórico da sessão (`src/utils/plinkoPhysics.js:25-27`; `src/components/GameCanvas.jsx:340-373`).
-7. **Captura no Sensor / Fallback de Chão**: A bola atinge o sensor do cesto (`bin-i`) ou colide com o chão (`isFloor`). Em ambos os casos, o turno é resolvido: o fallback calcula `computeFloorFallbackBin(ball.position.x, width)`, evitando congelamento na fase `RESOLVE` (`src/components/GameCanvas.jsx:405-464`; `src/utils/plinkoPhysics.js:49-52`).
-8. **Resolução de Marcação e Checagem de Vitória**: `resolveTurn` marca a célula na cartela se houver correspondência, credita moedas por acerto e avalia a condição de vitória do modo (`checkLineMatch`, `checkFullCard` ou `checkAnyFive`). Havendo vitória, agenda a fase `VICTORY` e exibe o `NextLevelModal` com a recompensa calculada (`src/hooks/useGameLogic.js:380-440`).
-9. **Continuação ou Game Over**: Se não houver vitória e as bolas chegarem a zero, o jogo transita para `GAME_OVER` após 750 ms (`src/hooks/useGameLogic.js:424-436`). Caso ainda restem bolas, retorna à fase `SPIN`.
-10. **Roleta Bônus (Lucky Spin)**: Ao atingir múltiplos de 25 níveis em qualquer modo, o jogo transita para `BONUS_WHEEL`. O giro da roleta é acionado pelo jogador e a recompensa é creditada de forma estritamente idempotente ao parar (`src/hooks/useGameLogic.js:275-300`; `src/components/LuckySpin.jsx:82-126`).
+## 4. Dono de cada estado
 
----
-
-## 4. Dono de Cada Estado
-
-| Estado | Onde vive | Quem escreve | Quem lê |
+| Estado / armazenamento | Onde vive | Quem escreve | Quem lê |
 | --- | --- | --- | --- |
-| `coins` | `src/hooks/useGameLogic.js:125` | Hidratação, `resolveTurn`, `buyItem`, `claimLuckySpinReward` | Hook (persistência), Header e modais via `App.jsx` |
-| `levels` / `currentLevel` | `src/hooks/useGameLogic.js:127-131` | Hidratação, `nextLevel` | Hook (ranges, dificuldade, prêmios) e Header |
-| `balls` | `src/hooks/useGameLogic.js:150` | `initLevel`, `dropBall`, compras em `buyItem` | Guardas de disparo, derrota e indicador no `Footer.jsx` |
-| `bingoCard` | `src/hooks/useGameLogic.js:151` | `initLevel`, marcações em `resolveTurn` | `BingoCard.jsx`, `BucketRow.jsx`, `MagicNumberModal.jsx` e `goldenCols` |
-| `slotsResult` | `src/hooks/useGameLogic.js:152` | `initLevel`, `startSpin`, `resolveTurn` | `BucketRow.jsx` e cálculo de `goldenCols` |
-| `phase` | `src/hooks/useGameLogic.js:159` | Inicialização, spin, queda, vitória, derrota e compras | Guardas no hook, `Footer.jsx`, `BucketRow.jsx` e modais em `App.jsx` |
-| `isGameOver`, `winState`, `winReward` | `src/hooks/useGameLogic.js:153-154,161` | `initLevel`, `resolveTurn`, compras em `buyItem` | Modais de fim de jogo (`NextLevelModal`, `GameOverModal`) |
-| `fireBallActive`, `magicActive` | `src/hooks/useGameLogic.js:155-156` | Compras em `buyItem`, limpos após uso em `resolveTurn` | `GameCanvas.jsx` (propriedades da bola) e `BucketRow.jsx` |
-| `luckySpinReward` | `src/hooks/useGameLogic.js:160` | `spinLuckySpin` (define), `claimLuckySpinReward` (consome) | `LuckySpin.jsx` |
-| `canvasRef`, `runnerRef` | `src/App.jsx:176`; `src/components/GameCanvas.jsx:47` | Refs de montagem e controle do ciclo de vida | Invocação de `dropBall` e cancelamento de física no unmount |
-| `audioSettings` | `src/App.jsx:23-27` | Hidratação e `src/components/SideMenu.jsx:55-82` | Persistência `bplm.audio.v1`, BGM/SFX em `App.jsx` e `SideMenu.jsx` |
-| `gameStarted` | `src/App.jsx:47` | Seleção de modo na Home e botão Home do menu lateral | Alternância de tela Home vs. Jogo em `src/App.jsx:240-449` |
-| `messageModal` | `src/App.jsx:156` | `showMessage` / `closeMessage` em eventos de jogo | Renderização do `MessageModal` para toasts e celebrações |
-| `showMagicModal`, `showFireballConfirm` | `src/App.jsx:158-159` | Botões do rodapé em `src/App.jsx:374-380` | Visibilidade dos diálogos de poder |
+| coins | Hook (`src/hooks/useGameLogic.js:108`) | Hidratação, resolveTurn, buyItem, claim (`src/hooks/useGameLogic.js:121`; `src/hooks/useGameLogic.js:391`; `src/hooks/useGameLogic.js:467`; `src/hooks/useGameLogic.js:301`) | Persistência e App/Header/compras (`src/hooks/useGameLogic.js:136`; `src/App.jsx:51`; `src/components/Header.jsx:4`) |
+| levels; currentLevel derivado | Hook (`src/hooks/useGameLogic.js:111`; `src/hooks/useGameLogic.js:140`) | Hidratação, nextLevel, completeLuckySpin (`src/hooks/useGameLogic.js:121`; `src/hooks/useGameLogic.js:261`; `src/hooks/useGameLogic.js:310`) | initLevel, startSpin, recompensa e Header (`src/hooks/useGameLogic.js:185`; `src/hooks/useGameLogic.js:320`; `src/hooks/useGameLogic.js:429`; `src/components/Header.jsx:4`) |
+| balls | Hook (`src/hooks/useGameLogic.js:142`) | initLevel, dropBall, buyItem (`src/hooks/useGameLogic.js:185`; `src/hooks/useGameLogic.js:384`; `src/hooks/useGameLogic.js:467`) | Guardas/derrota e Footer (`src/hooks/useGameLogic.js:384`; `src/hooks/useGameLogic.js:435`; `src/components/Footer.jsx:3`) |
+| bingoCard | Hook (`src/hooks/useGameLogic.js:143`) | initLevel e resolveTurn (`src/hooks/useGameLogic.js:185`; `src/hooks/useGameLogic.js:391`) | Sorteio, goldenCols, BingoCard, BucketRow, MagicNumberModal (`src/hooks/useGameLogic.js:320`; `src/App.jsx:56`; `src/components/BingoCard.jsx:17`; `src/components/BucketRow.jsx:167`; `src/components/Modal/MagicNumberModal.jsx:11`) |
+| slotsResult | Hook (`src/hooks/useGameLogic.js:144`) | initLevel, startSpin, resolveTurn (`src/hooks/useGameLogic.js:185`; `src/hooks/useGameLogic.js:320`; `src/hooks/useGameLogic.js:391`) | goldenCols, cestos e handleBallLanded (`src/App.jsx:56`; `src/components/BucketRow.jsx:167`; `src/App.jsx:215`) |
+| phase | Hook (`src/hooks/useGameLogic.js:151`) | initLevel, ações de jogo, callbacks de safeTimeout e buyItem (`src/hooks/useGameLogic.js:185`; `src/hooks/useGameLogic.js:261`; `src/hooks/useGameLogic.js:320`; `src/hooks/useGameLogic.js:384`; `src/hooks/useGameLogic.js:391`; `src/hooks/useGameLogic.js:467`) | Guardas, sons, Footer, BucketRow e modais em App (`src/hooks/useGameLogic.js:320`; `src/App.jsx:148`; `src/components/Footer.jsx:4`; `src/components/BucketRow.jsx:167`; `src/App.jsx:417`) |
+| isGameOver / winState / winReward | Hook (`src/hooks/useGameLogic.js:145`; `src/hooks/useGameLogic.js:146`; `src/hooks/useGameLogic.js:156`) | initLevel/resolveTurn; buyItem limpa isGameOver (`src/hooks/useGameLogic.js:185`; `src/hooks/useGameLogic.js:391`; `src/hooks/useGameLogic.js:467`) | winState e winReward orientam App; isGameOver é exportado, App não o desestrutura (`src/hooks/useGameLogic.js:487`; `src/App.jsx:51`; `src/App.jsx:418`) |
+| fireBallActive / magicActive | Hook (`src/hooks/useGameLogic.js:147`; `src/hooks/useGameLogic.js:148`) | initLevel/resolveTurn limpam; buyItem ativa Fireball, startSpin ativa Magic (`src/hooks/useGameLogic.js:185`; `src/hooks/useGameLogic.js:391`; `src/hooks/useGameLogic.js:467`; `src/hooks/useGameLogic.js:348`) | App/dropBall/goldenCols e BucketRow (`src/App.jsx:180`; `src/App.jsx:56`; `src/components/BucketRow.jsx:167`) |
+| luckySpinReward / pendingLuckyRewardRef | Hook: estado visual/ref de consumo (`src/hooks/useGameLogic.js:152`; `src/hooks/useGameLogic.js:155`) | spinLuckySpin, claim, initLevel e completeLuckySpin (`src/hooks/useGameLogic.js:279`; `src/hooks/useGameLogic.js:301`; `src/hooks/useGameLogic.js:185`; `src/hooks/useGameLogic.js:310`) | LuckySpin via reward; spin/claim leem ref (`src/App.jsx:443`; `src/hooks/useGameLogic.js:279`; `src/hooks/useGameLogic.js:301`) |
+| timersRef / hydratedRef | Hook (`src/hooks/useGameLogic.js:162`; `src/hooks/useGameLogic.js:118`) | safeTimeout/clearAllTimers e hidratação (`src/hooks/useGameLogic.js:163`; `src/hooks/useGameLogic.js:172`; `src/hooks/useGameLogic.js:121`) | Cancelamento e persistência (`src/hooks/useGameLogic.js:172`; `src/hooks/useGameLogic.js:135`) |
+| audioSettings / audioHydratedRef | App (`src/App.jsx:23`; `src/App.jsx:28`) | Hidratação e SideMenu.toggleSetting (`src/App.jsx:32`; `src/components/SideMenu.jsx:6`) | Persistência, useSound e vibração do canvas (`src/App.jsx:44`; `src/App.jsx:77`; `src/App.jsx:349`) |
+| gameStarted / gameMode | App (`src/App.jsx:47`; `src/App.jsx:48`) | Botões Home; onGoHome limpa gameStarted (`src/App.jsx:262`; `src/App.jsx:278`; `src/App.jsx:294`; `src/App.jsx:323`) | Overlay Home/áudio e useGameLogic (`src/App.jsx:245`; `src/App.jsx:94`; `src/App.jsx:53`) |
+| messageModal | App (`src/App.jsx:156`) | showMessage/closeMessage (`src/App.jsx:163`; `src/App.jsx:173`) | MessageModal (`src/App.jsx:408`) |
+| showMagicModal / showFireballConfirm / isMenuOpen | App (`src/App.jsx:158`; `src/App.jsx:159`; `src/App.jsx:160`) | onPowerUp/onOpenMenu e callbacks de fechar (`src/App.jsx:377`; `src/App.jsx:312`; `src/App.jsx:322`; `src/App.jsx:390`; `src/App.jsx:400`) | Props isOpen dos três componentes (`src/App.jsx:389`; `src/App.jsx:399`; `src/App.jsx:321`) |
+| goldenCols / canvasRef | App: memo/ref (`src/App.jsx:56`; `src/App.jsx:176`) | useMemo e montagem de GameCanvas (`src/App.jsx:56`; `src/App.jsx:346`) | GameCanvas e handleSlotClick (`src/App.jsx:351`; `src/App.jsx:183`) |
+| sceneRef / engineRef / renderRef / runnerRef | GameCanvas (`src/components/GameCanvas.jsx:9`) | Montagem/cleanup e handleResize (`src/components/GameCanvas.jsx:123`; `src/components/GameCanvas.jsx:450`; `src/components/GameCanvas.jsx:469`) | dropBall, colisões e Render/Runner (`src/components/GameCanvas.jsx:50`; `src/components/GameCanvas.jsx:144`; `src/components/GameCanvas.jsx:443`) |
+| processedBalls / litPegs / particles / shake | GameCanvas (`src/components/GameCanvas.jsx:14`; `src/components/GameCanvas.jsx:26`; `src/components/GameCanvas.jsx:299`; `src/components/GameCanvas.jsx:29`) | Colisões, afterRender, resize e cleanup (`src/components/GameCanvas.jsx:144`; `src/components/GameCanvas.jsx:349`; `src/components/GameCanvas.jsx:450`; `src/components/GameCanvas.jsx:469`) | Deduplicação, desenho e classe CSS (`src/components/GameCanvas.jsx:239`; `src/components/GameCanvas.jsx:349`; `src/components/GameCanvas.jsx:490`) |
+| Refs de callback, vibração, alvos e imagem | GameCanvas (`src/components/GameCanvas.jsx:17`; `src/components/GameCanvas.jsx:18`; `src/components/GameCanvas.jsx:21`; `src/components/GameCanvas.jsx:25`; `src/components/GameCanvas.jsx:31`) | Efeitos de atualização das props (`src/components/GameCanvas.jsx:33`; `src/components/GameCanvas.jsx:37`; `src/components/GameCanvas.jsx:42`; `src/components/GameCanvas.jsx:46`) | Colisões e construção/resize (`src/components/GameCanvas.jsx:144`; `src/components/GameCanvas.jsx:141`; `src/components/GameCanvas.jsx:458`) |
+| displayNum / isFinal; revealed / prevPhase | RollingSlot/BucketRow (`src/components/BucketRow.jsx:17`; `src/components/BucketRow.jsx:169`) | update, onFinish e mudança de fase (`src/components/BucketRow.jsx:24`; `src/components/BucketRow.jsx:241`; `src/components/BucketRow.jsx:173`) | Texto/animação e showGold (`src/components/BucketRow.jsx:51`; `src/components/BucketRow.jsx:194`) |
+| uiState / rotation / displayReward; refs da roda/ticker/timer/trava | LuckySpin (`src/components/LuckySpin.jsx:11`; `src/components/LuckySpin.jsx:15`; `src/components/LuckySpin.jsx:18`) | handleSpin, timeout e checkRotation; efeito atualiza ticker (`src/components/LuckySpin.jsx:78`; `src/components/LuckySpin.jsx:32`; `src/components/LuckySpin.jsx:21`) | Rotação CSS, texto/botão, ticker e cleanup (`src/components/LuckySpin.jsx:177`; `src/components/LuckySpin.jsx:192`; `src/components/LuckySpin.jsx:32`; `src/components/LuckySpin.jsx:24`) |
+| selectedId / showReward | MagicNumberModal (`src/components/Modal/MagicNumberModal.jsx:14`) | Efeito de abertura, seleção, vídeo e fechamento (`src/components/Modal/MagicNumberModal.jsx:18`; `src/components/Modal/MagicNumberModal.jsx:102`; `src/components/Modal/MagicNumberModal.jsx:45`; `src/components/Modal/MagicNumberModal.jsx:59`) | selectedCell e branch ConfirmationReward (`src/components/Modal/MagicNumberModal.jsx:28`; `src/components/Modal/MagicNumberModal.jsx:65`) |
+| showReward | FireballModal (`src/components/Modal/FireballModal.jsx:14`) | Abertura, vídeo e fechamento (`src/components/Modal/FireballModal.jsx:18`; `src/components/Modal/FireballModal.jsx:31`; `src/components/Modal/FireballModal.jsx:44`) | Branch ConfirmationReward (`src/components/Modal/FireballModal.jsx:50`) |
+| audioRef / poolRef / optionsRef | useSound (`src/hooks/useSound.js:4`) | Efeitos, play, stop, setVolume (`src/hooks/useSound.js:12`; `src/hooks/useSound.js:17`; `src/hooks/useSound.js:43`; `src/hooks/useSound.js:94`; `src/hooks/useSound.js:101`) | Reprodução e cleanup (`src/hooks/useSound.js:43`; `src/hooks/useSound.js:25`) |
+| canvasRef de confete | CelebrationContent (`src/components/Modal/MessageModal.jsx:121`) | Ref do canvas na montagem (`src/components/Modal/MessageModal.jsx:166`) | Efeito confetti.create (`src/components/Modal/MessageModal.jsx:125`) |
+| memoryDropCount / sessionStorage | sessionPhysics (`src/utils/sessionPhysics.js:14`) | incrementSessionDropCount/resetSessionDropCount (`src/utils/sessionPhysics.js:41`; `src/utils/sessionPhysics.js:57`) | getSessionDropCount/getSessionAssistFactor (`src/utils/sessionPhysics.js:20`; `src/utils/sessionPhysics.js:78`) |
 
----
+## 5. Fronteira física/render
 
-## 5. Fronteira Física / Render
+- Matter controla posição, velocidade, gravidade, corpos e contatos; buildStaticWorld cria paredes, chão, pinos, funis e sensores. React mantém saldo, cartela e fase (`src/components/GameCanvas.jsx:123`; `src/utils/plinkoPhysics.js:81`; `src/hooks/useGameLogic.js:106`).
+- Render desenha corpos no canvas; afterRender desenha partículas e brilho. React/DOM desenha cartela, cestos, controles e modais; shake só escolhe classe CSS (`src/components/GameCanvas.jsx:444`; `src/components/GameCanvas.jsx:349`; `src/App.jsx:334`; `src/App.jsx:356`; `src/App.jsx:369`; `src/App.jsx:407`; `src/components/GameCanvas.jsx:490`).
+- Entrada: ref.dropBall cria corpo e retorna booleano. Saída: onBallLandedRef retorna índice/Fireball, sem escrever saldo diretamente (`src/components/GameCanvas.jsx:50`; `src/components/GameCanvas.jsx:251`; `src/App.jsx:208`).
+- Resize/orientação espera 100 ms; resizeWorld escala posição, velocidade, raio e sprite das bolas, limita posição acima do sensor e reconstrói estáticos. No mesmo callback, Render.setSize/setPixelRatio ajustam desenho e bounds (`src/components/GameCanvas.jsx:450`; `src/utils/plinkoPhysics.js:50`).
 
-- **Matter.js**: Gerencia os corpos rígidos físicos (bolas, pinos, paredes laterais, divisores e sensores), gravidade e detecção de colisões. `Runner.run` avança o relógio da simulação e `Render.run` desenha na camada Canvas interna (`src/components/GameCanvas.jsx:153-168,441-445`).
-- **React / DOM**: Renderiza toda a interface do usuário (cartela, cabeçalho, rodapé com cestos alinhados ao Canvas, modais e menu lateral).
-- **Interface React ↔ Matter**:
-  - *Comando de Entrada*: `canvasRef.current.dropBall(colIndex, isFireball)` cria o corpo no mundo físico.
-  - *Evento de Saída*: `onBallLandedRef.current(binIdx, isFireball)` notifica o orquestrador React sobre o cesto atingido.
+## 6. Convenção de assets
 
----
+- useTheme fixa Standard; getImage/getSound concatenam /Images/Standard/ ou /Audio/Standard/. Immutable usa diretórios fixos independentes da skin; não é uma permissão de arquivo (`src/hooks/useTheme.js:1`; `src/hooks/useTheme.js:5`; `src/hooks/useTheme.js:7`).
+- public/Images/Standard contém fundo, card/cell/freecell, letras LUCKY, balões, botões e sprites ball/peg/triangle; consumidores: App, BingoCard, Header, Footer e física (`src/App.jsx:239`; `src/components/BingoCard.jsx:26`; `src/components/Header.jsx:6`; `src/components/Footer.jsx:15`; `src/components/GameCanvas.jsx:88`; `src/utils/plinkoPhysics.js:136`; `src/utils/plinkoPhysics.js:175`).
+- public/Images/Immutable contém Home, botões dos modos, Coin, bingo!, aro, centro e roleta; LuckySpin e modais também usam URLs literais (`src/App.jsx:251`; `src/App.jsx:271`; `src/App.jsx:287`; `src/App.jsx:303`; `src/components/Header.jsx:18`; `src/components/Modal/NextLevelModal.jsx:20`; `src/components/LuckySpin.jsx:151`; `src/components/LuckySpin.jsx:163`; `src/components/LuckySpin.jsx:182`).
+- Áudio Standard: song/peg/buttons; Immutable: Theme/slot/fireball/explosion/lucky/BINGO!/palheta. App define caminhos e volumes por useSound (`src/App.jsx:80`; `src/App.jsx:81`; `src/App.jsx:82`; `src/App.jsx:83`; `src/App.jsx:84`; `src/App.jsx:86`; `src/App.jsx:87`; `src/App.jsx:88`; `src/App.jsx:89`; `src/App.jsx:90`).
 
-## 6. Convenção de Assets
-
-- **Imagens**: A pasta `public/Images/` divide-se em `Standard/` (skin visual padrão: fundo, cartela, balões, botões e sprites físicos `ball.png`, `peg.png`, `triangle.png`) e `Immutable/` (elementos invariantes como `roleta.png`). A resolução de caminhos é centralizada em `src/hooks/useTheme.js:1-17`.
-- **Áudio**: A pasta `public/Audio/` segue a mesma convenção: `Standard/` (`song.mp3`, `peg.mp3`, `buttons.mp3`) e `Immutable/` (`Theme.mp3`, `slot.mp3`, `fireball.mp3`, `explosion.mp3`, `lucky.mp3`, `BINGO!.mp3`, `palheta.mp3`).
-
----
-
-## 7. Onde Mexer Para (10 Tarefas Essenciais)
+## 7. Onde mexer para
 
 | Tarefa | Arquivo exato / ponto atual |
 | --- | --- |
-| 1. Mudar gravidade do jogo | `src/utils/plinkoPhysics.js:40` (`PHYSICS_CONFIG.GRAVITY_Y`) e `src/components/GameCanvas.jsx:154`. |
-| 2. Adicionar ou alterar modo de jogo | `src/hooks/useGameLogic.js:9-25` (`MODE_CONFIG`), `src/hooks/useGameLogic.js:59-86` (funções de vitória) e `src/App.jsx:258-296` (botões da Home). |
-| 3. Trocar áudio ou volume dos pinos | `public/Audio/Standard/peg.mp3`; volume e pooling em `src/App.jsx:83` e resolução em `src/hooks/useTheme.js:6`. |
-| 4. Ajustar valores da economia (moedas/custos) | `src/hooks/useGameLogic.js:83-86,291-300,432-475`; modais em `src/components/Modal/FireballModal.jsx:15`, `src/components/Modal/MagicNumberModal.jsx:30`, `src/components/Modal/GameOverModal.jsx:24`. |
-| 5. Adicionar nova tela ou modal de interface | `src/App.jsx:240-449` — controle de renderização condicional e modais. |
-| 6. Mudar faixas numéricas de bingo por nível | `src/hooks/useGameLogic.js:27-54` (`getLevelRanges`). |
-| 7. Alterar chances e distribuição de colunas douradas | `src/utils/mathUtils.js:25-95` e `src/hooks/useGameLogic.js:320-355`. |
-| 8. Modificar a força de assistência aos pinos | `src/utils/sessionPhysics.js:70-94` e `src/components/GameCanvas.jsx:335-373`. |
-| 9. Alterar prêmios ou posições da roleta Lucky Spin | `src/components/LuckySpin.jsx:7-8,83-115` e imagem `public/Images/Immutable/roleta.png`. |
-| 10. Ajustar física de resize, pinos ou sensores | `src/utils/plinkoPhysics.js:6-43,59-178` (`PHYSICS_CONFIG`, `buildStaticWorld`, `computeFloorFallbackBin`) e `src/components/GameCanvas.jsx:449-472` (`handleResize`). |
+| 1. Mudar gravidade | PHYSICS_CONFIG.GRAVITY_Y (`src/utils/plinkoPhysics.js:37`); aplicação em GameCanvas (`src/components/GameCanvas.jsx:124`). |
+| 2. Adicionar modo | MODE_CONFIG e condições de vitória (`src/hooks/useGameLogic.js:9`; `src/hooks/useGameLogic.js:417`); níveis e botões Home (`src/hooks/useGameLogic.js:111`; `src/App.jsx:262`). |
+| 3. Trocar som | public/Audio/Standard/peg.mp3; seleção/volume em App e resolução no hook (`src/App.jsx:83`; `src/hooks/useTheme.js:6`). |
+| 4. Mudar valor da economia | Prêmios/saldo/compras no hook; custos nos modais Fireball/Magic/GameOver (`src/hooks/useGameLogic.js:86`; `src/hooks/useGameLogic.js:413`; `src/hooks/useGameLogic.js:467`; `src/components/Modal/FireballModal.jsx:15`; `src/components/Modal/MagicNumberModal.jsx:30`; `src/components/Modal/GameOverModal.jsx:23`). |
+| 5. Adicionar tela | Composição/condicionais em App (`src/App.jsx:245`; `src/App.jsx:438`). |
+| 6. Mudar faixas numéricas | getLevelRanges (`src/hooks/useGameLogic.js:27`). |
+| 7. Mudar probabilidades/colunas | calculateProbabilities/pickNonAdjacentColumns e startSpin (`src/utils/mathUtils.js:30`; `src/utils/mathUtils.js:57`; `src/hooks/useGameLogic.js:320`). |
+| 8. Mudar assistência nos pinos | getSessionAssistFactor, PEG_STEER_NUDGE e aplicação da força (`src/utils/sessionPhysics.js:78`; `src/utils/plinkoPhysics.js:23`; `src/components/GameCanvas.jsx:196`). |
+| 9. Mudar prêmios/alinhamento da roleta | spinLuckySpin, PRIZE_SLICES e public/Images/Immutable/roleta.png (`src/hooks/useGameLogic.js:279`; `src/components/LuckySpin.jsx:6`; `src/components/LuckySpin.jsx:114`; `src/components/LuckySpin.jsx:182`). |
+| 10. Mudar resize/pinos/sensores | resizeWorld/buildStaticWorld e handleResize (`src/utils/plinkoPhysics.js:50`; `src/utils/plinkoPhysics.js:81`; `src/components/GameCanvas.jsx:450`). |
 
----
+## 8. Armadilhas
 
-## 8. Armadilhas e Mitigações Arquiteturais
-
-1. **Retorno à Home e Isolamento de Partidas**:
-   - *Problema*: Retornar à Home durante o giro numérico (`SPINNING`) deixava temporizadores pendentes que disparavam `DROP` na partida seguinte com cartela desincronizada (`[0,0,0,0,0]`).
-   - *Mitigação*: `useGameLogic.js` implementa `timersRef` e `safeTimeout`. A função `initLevel()` executa `clearAllTimers()`, cancelando imediatamente qualquer timer pendente de rodadas anteriores (`src/hooks/useGameLogic.js:157-185,248`).
-2. **Garantia de Encerramento de Turno & Fallback de Chão**:
-   - *Problema*: Bolas que não atingiam os sensores de cesto poderiam deixar a fase congelada em `RESOLVE`.
-   - *Mitigação*: O listener de colisão trata `isFloor` e calcula o cesto pelo eixo horizontal com `computeFloorFallbackBin(ball.position.x, width)`, despachando o evento para `onBallLandedRef.current`. Além disso, bolas só são debitadas se `dropBall()` retornar `true` (`src/components/GameCanvas.jsx:449-464`; `src/utils/plinkoPhysics.js:49-52`).
-3. **Reconstrução Estática no Resize e Orientação de Tela**:
-   - *Problema*: Corpos estáticos (`isStatic: true`) mantinham posições calculadas na montagem inicial; ao redimensionar a janela ou rotacionar o celular, cestos, pinos e chão ficavam desalinhados da interface React.
-   - *Mitigação*: `handleResize` invoca `buildStaticWorld(engine, width, height)` de forma debounced, removendo todos os corpos estáticos antigos e reconstruindo paredes, chão, pinos, funis e sensores milimetricamente proporcionais às novas dimensões (`src/components/GameCanvas.jsx:449-472`; `src/utils/plinkoPhysics.js:59-178`).
-4. **Idempotência no Crédito da Roleta (Lucky Spin)**:
-   - *Problema*: Chamar `claimLuckySpinReward` repetidamente acumulava créditos adicionais indevidos.
-   - *Mitigação*: A função consome imediatamente `luckySpinReward`, redefinindo-o para `null`. Chamadas subsequentes retornam `0` sem alterar a carteira de moedas (`src/hooks/useGameLogic.js:291-300`).
-5. **Compra Segura de Poderes**:
-   - *Mitigação*: `startSpin` valida a fase e retorna um valor booleano. A dedução de moedas em `App.jsx` só ocorre após a confirmação de que o sorteio foi aceito pelo motor lógico (`src/App.jsx:195-206`).
-6. **Conformidade com Regras de Hooks no React 19**:
-   - *Mitigação*: Remoção de efeitos com chamadas a `setState` desnecessárias; `BucketRow.jsx` utiliza presets determinísticos de chama (`FLAME_PRESETS`) eliminando `Math.random()` durante o fluxo de renderização; `MessageModal.jsx` isola confete em componente filho dedicado (`CelebrationContent`) (`src/components/BucketRow.jsx:5-11,48-126`; `src/components/Modal/MessageModal.jsx:53-125`).
+- Letras internas são BINGO; cabeçalhos visuais são LUCKY. FREE começa marcado em FINGO/BINGO e SPINGO mantém número central não marcado (`src/hooks/useGameLogic.js:7`; `src/components/BingoCard.jsx:3`; `src/hooks/useGameLogic.js:216`).
+- Home é overlay: onGoHome só fecha menu e muda gameStarted; initLevel ocorre ao selecionar novamente um modo. Nível/saldo persistidos não são zerados por initLevel (`src/App.jsx:323`; `src/App.jsx:278`; `src/hooks/useGameLogic.js:185`).
+- Fireball tem isSensor=true e velocidade inicial própria; só bola normal incrementa contador de assistência. O listener ainda aplica força quando encontra pino (`src/components/GameCanvas.jsx:94`; `src/components/GameCanvas.jsx:99`; `src/components/GameCanvas.jsx:166`).
+- O número pontuado vem do cesto de chegada, não da coluna clicada; processedBalls registra o corpo antes do callback e sua remoção física é posterior (`src/App.jsx:215`; `src/components/GameCanvas.jsx:244`; `src/components/GameCanvas.jsx:265`).
+- O prêmio pendente fica na ref; setState é a projeção visual. claim zera a ref antes de atualizar moedas; a roda cancela seu timeout ao desmontar (`src/hooks/useGameLogic.js:155`; `src/hooks/useGameLogic.js:301`; `src/components/LuckySpin.jsx:24`).
+- clearAllTimers cobre safeTimeout do hook. Mensagens e vídeos simulados mantêm setTimeout próprios; textos dizem dois segundos, mas concessões dos vídeos ocorrem em 2500 ms (`src/hooks/useGameLogic.js:172`; `src/App.jsx:163`; `src/components/Modal/FireballModal.jsx:31`; `src/components/Modal/MagicNumberModal.jsx:45`; `src/components/Modal/GameOverModal.jsx:46`).
+- buildStaticWorld remove todos os isStatic; resizeWorld trata corpos player-ball/fireball antes dessa reconstrução e preserva o id usado na deduplicação (`src/utils/plinkoPhysics.js:85`; `src/utils/plinkoPhysics.js:50`; `src/components/GameCanvas.jsx:239`).
+- npm test executa cinco suítes unitárias e seis regressões com hook/JSX reais. Testes de canvas substituem desenho/agendamento automático, avançam Matter.Engine manualmente e verificam callback; renderização visual e aparelho Android: não verificado (`package.json:7`; `test-fingo-physics.mjs:202`; `tests/game-regressions.test.mjs:11`; `tests/game-regressions.test.mjs:125`; `tests/game-regressions.test.mjs:181`).

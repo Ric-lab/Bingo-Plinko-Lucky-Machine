@@ -8,24 +8,20 @@ const PRIZE_SLICES = [
 ];
 
 export default function LuckySpin({ spinLuckySpin, claimLuckySpinReward, completeLuckySpin, reward, playTicker }) {
-    const [uiState, setUiState] = useState(() => (reward !== null ? 'SHOW_RESULT' : 'IDLE')); // IDLE, SPINNING, SHOW_RESULT
+    const [uiState, setUiState] = useState('IDLE'); // IDLE, SPINNING, SHOW_RESULT
     const [rotation, setRotation] = useState(0);
     const [displayReward, setDisplayReward] = useState(null);
 
     const wheelRef = useRef(null);
     const lastSlotRef = useRef(0);
     const playTickerRef = useRef(playTicker);
+    const spinTimerRef = useRef(null);
+    const spinStartedRef = useRef(false);
     useEffect(() => {
         playTickerRef.current = playTicker;
     }, [playTicker]);
 
-    const [prevReward, setPrevReward] = useState(reward);
-    if (prevReward !== reward) {
-        setPrevReward(reward);
-        if (reward !== null && uiState === 'IDLE') {
-            setUiState('SHOW_RESULT');
-        }
-    }
+    useEffect(() => () => clearTimeout(spinTimerRef.current), []);
 
     // Sound effect logic
     useEffect(() => {
@@ -80,7 +76,8 @@ export default function LuckySpin({ spinLuckySpin, claimLuckySpinReward, complet
     }, [uiState]);
 
     const handleSpin = () => {
-        if (uiState !== 'IDLE') return;
+        if (uiState !== 'IDLE' || spinStartedRef.current) return;
+        spinStartedRef.current = true;
         setUiState('SPINNING');
 
         // 1. Get the result immediately so we know where to stop
@@ -120,8 +117,9 @@ export default function LuckySpin({ spinLuckySpin, claimLuckySpinReward, complet
         setDisplayReward(wonPrize);
 
         // 3. Wait for animation to finish (8s)
-        setTimeout(() => {
-            claimLuckySpinReward?.(wonPrize);
+        spinTimerRef.current = setTimeout(() => {
+            spinTimerRef.current = null;
+            claimLuckySpinReward?.();
             setUiState('SHOW_RESULT');
         }, 8000);
     };

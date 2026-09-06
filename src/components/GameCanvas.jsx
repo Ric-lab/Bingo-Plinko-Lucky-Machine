@@ -1,7 +1,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import Matter from 'matter-js';
 import { incrementSessionDropCount, getSessionAssistFactor } from '../utils/sessionPhysics.js';
-import { PHYSICS_CONFIG, computeFloorFallbackBin, buildStaticWorld } from '../utils/plinkoPhysics.js';
+import { PHYSICS_CONFIG, computeFloorFallbackBin, buildStaticWorld, resizeWorld } from '../utils/plinkoPhysics.js';
 
 const { Engine, Render, Runner, Bodies, Body, Composite, Events, Vector } = Matter;
 
@@ -448,25 +448,20 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
         // Handle screen resize & orientation change dynamically
         let resizeTimer = null;
         const handleResize = () => {
-            if (!sceneRef.current || !renderRef.current || !engineRef.current) return;
-            const newWidth = sceneRef.current.clientWidth;
-            const newHeight = sceneRef.current.clientHeight;
-            if (newWidth > 0 && newHeight > 0) {
-                renderRef.current.options.width = newWidth;
-                renderRef.current.options.height = newHeight;
-                if (renderRef.current.canvas) {
-                    renderRef.current.canvas.width = newWidth * (window.devicePixelRatio || 1);
-                    renderRef.current.canvas.height = newHeight * (window.devicePixelRatio || 1);
-                    renderRef.current.canvas.style.width = `${newWidth}px`;
-                    renderRef.current.canvas.style.height = `${newHeight}px`;
-                }
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => {
-                    if (engineRef.current) {
-                        buildStaticWorld(engineRef.current, newWidth, newHeight, getImageRef.current);
-                    }
-                }, 100);
-            }
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (!sceneRef.current || !renderRef.current || !engineRef.current) return;
+                const newWidth = sceneRef.current.clientWidth;
+                const newHeight = sceneRef.current.clientHeight;
+                if (newWidth <= 0 || newHeight <= 0) return;
+                const render = renderRef.current;
+                resizeWorld(engineRef.current, render.options.width, render.options.height,
+                    newWidth, newHeight, getImageRef.current);
+                // Apply render and physical dimensions in the same callback.
+                Render.setSize(render, newWidth, newHeight);
+                Render.setPixelRatio(render, window.devicePixelRatio || 1);
+                litPegs.current.clear();
+            }, 100);
         };
         window.addEventListener('resize', handleResize);
         window.addEventListener('orientationchange', handleResize);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import Matter from 'matter-js';
 import { getSessionDropCount, incrementSessionDropCount, resetSessionDropCount, getSessionAssistFactor } from './src/utils/sessionPhysics.js';
 import { calculateProbabilities, pickNonAdjacentColumns } from './src/utils/mathUtils.js';
-import { PHYSICS_CONFIG, computeFloorFallbackBin, buildStaticWorld } from './src/utils/plinkoPhysics.js';
+import { computeFloorFallbackBin, buildStaticWorld } from './src/utils/plinkoPhysics.js';
 import {
     MODE_CONFIG,
     calculateWinReward,
@@ -113,65 +113,7 @@ assert.equal(checkLineMatch(cardAlmost), false, '4 in a row should NOT win FINGO
 console.log('✓ FINGO win check tests PASSED!');
 
 
-console.log('\n=== TEST 4: Peg Assist Vector Calculation ===');
-function computePegNudge(ballX, targetCols, canvasWidth, dropCount) {
-    const binW = canvasWidth / 5;
-    let bestTargetX = null;
-    let minDist = Infinity;
-
-    for (let i = 0; i < targetCols.length; i++) {
-        const colIdx = targetCols[i];
-        const colCenterX = (colIdx + 0.5) * binW;
-        const dist = Math.abs(colCenterX - ballX);
-        if (dist < minDist) {
-            minDist = dist;
-            bestTargetX = colCenterX;
-        }
-    }
-
-    if (bestTargetX !== null) {
-        const diffX = bestTargetX - ballX;
-        if (Math.abs(diffX) > 6) {
-            const dirX = Math.sign(diffX);
-            const assist = getSessionAssistFactor(dropCount);
-            return dirX * PHYSICS_CONFIG.PEG_STEER_NUDGE * assist;
-        }
-    }
-    return 0;
-}
-
-const canvasW = 360;
-const nudgeEarly = computePegNudge(100, [0], canvasW, 1);
-assert.ok(nudgeEarly < 0, 'Nudge should be negative (steer left towards target)');
-assert.equal(nudgeEarly, -1 * PHYSICS_CONFIG.PEG_STEER_NUDGE * 1.0);
-
-const nudgeLate = computePegNudge(100, [0], canvasW, 35);
-assert.ok(nudgeLate < 0, 'Nudge should still be towards target');
-assert.equal(nudgeLate, -1 * PHYSICS_CONFIG.PEG_STEER_NUDGE * 0.15);
-assert.ok(Math.abs(nudgeEarly) > Math.abs(nudgeLate), 'Early assist nudge must be stronger than late assist');
-
-const nudgeAligned = computePegNudge(36, [0], canvasW, 1);
-assert.equal(nudgeAligned, 0, 'Aligned ball should have 0 nudge');
-console.log('✓ Peg Assist Vector calculations PASSED!');
-
-
-console.log('\n=== TEST 5: Wall Bounce Physics & Bucket Sensors ===');
-const wallLeftKick = { x: PHYSICS_CONFIG.WALL_KICK_X, y: PHYSICS_CONFIG.WALL_KICK_Y };
-const wallRightKick = { x: -PHYSICS_CONFIG.WALL_KICK_X, y: PHYSICS_CONFIG.WALL_KICK_Y };
-assert.ok(wallLeftKick.x > 0, 'Left wall kick must push to the right (+x)');
-assert.ok(wallLeftKick.y < 0, 'Left wall kick must have upward lift (-y)');
-assert.ok(wallRightKick.x < 0, 'Right wall kick must push to the left (-x)');
-assert.ok(wallRightKick.y < 0, 'Right wall kick must have upward lift (-y)');
-
-const processedBalls = new Set();
-const ballId = 42;
-assert.equal(processedBalls.has(ballId), false);
-processedBalls.add(ballId);
-assert.equal(processedBalls.has(ballId), true, 'Ball must be marked as processed to prevent double scoring');
-console.log('✓ Wall bounce & bucket duplicate prevention PASSED!');
-
-
-console.log('\n=== TEST 6: Real Floor Fallback & Dynamic Resize Rebuild (plinkoPhysics) ===');
+console.log('\n=== TEST 4: Real Floor Fallback & Dynamic Resize Rebuild (plinkoPhysics) ===');
 // 6.1 Real computeFloorFallbackBin imported from plinkoPhysics.js
 assert.equal(computeFloorFallbackBin(-50, 360), 0, 'Negative x must clamp to bin 0');
 assert.equal(computeFloorFallbackBin(450, 360), 4, 'Out of bounds right x must clamp to bin 4');
@@ -217,7 +159,7 @@ resizedSensors.forEach((s, idx) => {
 console.log('✓ Floor fallback & dynamic resize static world rebuild tests PASSED!');
 
 
-console.log('\n=== TEST 7: Real Mode Rewards & Win Conditions (from useGameLogic) ===');
+console.log('\n=== TEST 5: Real Mode Rewards & Win Conditions (from useGameLogic) ===');
 // 7.1 Verify MODE_CONFIG values
 assert.equal(MODE_CONFIG.FINGO.balls, 50);
 assert.equal(MODE_CONFIG.BINGO.balls, 100);
@@ -257,61 +199,4 @@ assert.deepEqual(rangesLvl5.B, [1, 20], 'Level 5 (Hard) B range must be 1-20');
 console.log('✓ Real Mode rewards & win conditions tests PASSED!');
 
 
-console.log('\n=== TEST 8: Lucky Spin Idempotency & Safe State Machine ===');
-// 8.1 Test claimLuckySpinReward idempotency
-let userCoins = 1000;
-let luckySpinReward = 500;
-
-function executeClaim(amount) {
-    if (luckySpinReward === null) return 0;
-    const finalReward = typeof amount === 'number' ? amount : luckySpinReward;
-    luckySpinReward = null; // consumed immediately
-    userCoins += finalReward;
-    return finalReward;
-}
-
-// First claim: Successfully claims 500
-const firstClaim = executeClaim();
-assert.equal(firstClaim, 500, 'First claim must return 500');
-assert.equal(userCoins, 1500, 'Coins must increase to 1500');
-assert.equal(luckySpinReward, null, 'luckySpinReward must be consumed to null');
-
-// Duplicate claim (e.g. rapid taps or repeated function calls): Must return 0 and NOT credit coins
-const secondClaim = executeClaim();
-assert.equal(secondClaim, 0, 'Duplicate claim must return 0');
-assert.equal(userCoins, 1500, 'Coins must NOT increase on duplicate claim');
-
-// 8.2 Test Timer Cancellation on Game Restart / Return Home
-const activeTimers = new Set();
-let timerRan = false;
-
-function scheduleGameTimeout(callback, ms) {
-    const id = setTimeout(() => {
-        activeTimers.delete(id);
-        callback();
-    }, ms);
-    activeTimers.add(id);
-    return id;
-}
-
-function initLevelCleanup() {
-    activeTimers.forEach(id => clearTimeout(id));
-    activeTimers.clear();
-}
-
-// Player starts spin (scheduling 2200ms drop transition)
-scheduleGameTimeout(() => { timerRan = true; }, 50);
-assert.equal(activeTimers.size, 1, 'One timer scheduled');
-
-// Player clicks Home and re-enters (initLevel runs)
-initLevelCleanup();
-assert.equal(activeTimers.size, 0, 'Active timers must be cleared on initLevel');
-
-// Wait to ensure cancelled timer never fired
-await new Promise(resolve => setTimeout(resolve, 80));
-assert.equal(timerRan, false, 'Cancelled timer must NOT fire after restart/initLevel');
-
-console.log('✓ Lucky Spin idempotency & inter-game timer isolation tests PASSED!');
-console.log('\n=============================================');
-console.log('ALL 8 SUITES PASSED WITH REAL APPLICATION CODE!');
-console.log('=============================================');
+console.log('ALL 5 UNIT SUITES PASSED. Run npm test for React and canvas regressions.');

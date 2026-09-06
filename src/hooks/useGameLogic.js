@@ -150,6 +150,9 @@ export function useGameLogic(gameMode = 'FINGO') {
     // PHASE: 'SPIN' | 'SPINNING' | 'DROP' | 'RESOLVE' | 'GAME_OVER' | 'VICTORY' | 'BONUS_WHEEL'
     const [phase, setPhase] = useState('SPIN');
     const [luckySpinReward, setLuckySpinReward] = useState(null);
+    // The pending reward must be consumed synchronously, including by callbacks
+    // captured before React renders the result of spinLuckySpin.
+    const pendingLuckyRewardRef = useRef(null);
     const [winReward, setWinReward] = useState(0);
 
     // Config for Current Mode
@@ -182,6 +185,9 @@ export function useGameLogic(gameMode = 'FINGO') {
     const initLevel = useCallback(() => {
         // Cancel all pending timeouts from any previous round
         clearAllTimers();
+
+        pendingLuckyRewardRef.current = null;
+        setLuckySpinReward(null);
 
         // Use currentLevel derived from state
         const lvl = levels[gameMode || 'FINGO'];
@@ -271,6 +277,7 @@ export function useGameLogic(gameMode = 'FINGO') {
     };
 
     const spinLuckySpin = () => {
+        if (pendingLuckyRewardRef.current !== null) return pendingLuckyRewardRef.current;
         // Same probabilities as before
         const r = Math.random() * 100;
         let reward = 0;
@@ -286,20 +293,22 @@ export function useGameLogic(gameMode = 'FINGO') {
         else reward = 10000;
 
         // Save reward for visual wheel alignment; credit coins when wheel stops (claimLuckySpinReward)
+        pendingLuckyRewardRef.current = reward;
         setLuckySpinReward(reward);
         return reward;
     };
 
-    const claimLuckySpinReward = (rewardAmount) => {
-        // IDEMPOTENT: If already claimed or no reward active, do nothing
-        if (luckySpinReward === null) return 0;
-        const finalReward = typeof rewardAmount === 'number' ? rewardAmount : luckySpinReward;
-        setLuckySpinReward(null); // Consumed immediately
+    const claimLuckySpinReward = useCallback(() => {
+        const finalReward = pendingLuckyRewardRef.current;
+        if (finalReward === null) return 0;
+        pendingLuckyRewardRef.current = null;
+        setLuckySpinReward(null);
         setCoins(prev => prev + finalReward);
         return finalReward;
-    };
+    }, []);
 
     const completeLuckySpin = () => {
+        pendingLuckyRewardRef.current = null;
         setLuckySpinReward(null);
         // Advance Level after spin
         setLevels(prev => ({
@@ -417,7 +426,7 @@ export function useGameLogic(gameMode = 'FINGO') {
                     setPhase('VICTORY');
 
                     // REWARDS from MODE_CONFIG
-                    const earnedReward = (config?.baseReward || 100) + currentLevel;
+                    const earnedReward = calculateWinReward(gameMode, currentLevel);
                     setWinReward(earnedReward);
                     setCoins(prev => prev + earnedReward);
                 }, 1100);
