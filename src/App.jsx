@@ -49,7 +49,7 @@ export default function App() {
 
   const {
     state: { coins, balls, level, bingoCard, slotsResult, winState, winReward, phase, fireBallActive, magicActive, luckySpinReward },
-    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, claimLuckySpinReward, completeLuckySpin, triggerLuckySpin }
+    actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, claimLuckySpinReward, completeLuckySpin }
   } = useGameLogic(gameMode);
 
   // Target columns that have useful (unmarked matching) numbers or magic mode active
@@ -432,22 +432,6 @@ export default function App() {
             playClick={playClick}
           />
         )
-      )}
-
-      {/* TEST SHORTCUT: Jump to Lucky Spin / Roleta */}
-      {phase !== 'BONUS_WHEEL' && (
-        <button
-          onClick={() => {
-            playClick();
-            setGameStarted(true);
-            triggerLuckySpin();
-          }}
-          className="fixed top-20 left-4 bg-purple-700/90 hover:bg-purple-600 text-yellow-300 font-black z-50 px-3 py-1.5 text-xs rounded-lg shadow-xl border border-yellow-400/50 flex items-center gap-1.5 backdrop-blur-sm transition-all active:scale-95 cursor-pointer"
-          id="debug-spin-btn"
-          title="Testar Roleta Lucky Wheel"
-        >
-          🎡 TESTAR ROLETA
-        </button>
       )}
 
       {/* Lucky Wheel Bonus Phase */}
