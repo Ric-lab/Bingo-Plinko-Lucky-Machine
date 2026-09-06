@@ -3,11 +3,13 @@
 ## O que esta branch entrega
 
 - Android: plugin Google Sign-In e autorização restrita a `drive.appdata`.
-- Backup manual de moedas e dos níveis FINGO/BINGO/SPINGO no Drive da conta selecionada.
+- Salvamento automático de moedas e dos níveis FINGO/BINGO/SPINGO no aparelho, com backup automático no Drive após conectar a conta.
 - Não salva cartela, bolas, poderes ou partida em andamento.
-- Cada salvamento cria uma cópia; a restauração oferece a cópia mais recente e exige confirmação na Home. Não há mescla ou sincronização automática entre aparelhos.
-- Desconectar não apaga progresso local nem backups. Tokens ficam apenas na memória; após fechar o app ou expirar a sessão, entre novamente.
-- Os backups ficam na pasta privada do app, não na lista normal de arquivos do Drive. As cópias anteriores são mantidas; a interface oferece somente a mais recente.
+- Mudanças de saldo e nível gravam um journal local imediatamente no efeito React e enfileiram a escrita no Preferences. O backup aguarda dois segundos sem mudanças e repete pendências a cada 15 segundos e ao voltar à página/conexão.
+- Ao abrir, uma conta já conectada retoma a autorização sem mostrar seletor de conta. Em instalação nova, conecte a mesma conta uma vez: o backup é recuperado automaticamente antes de jogar, se não houver progresso local divergente.
+- Cada envio cria uma revisão com seus antecedentes. Mudanças incompatíveis entre aparelhos ou troca de conta pedem uma escolha; moedas nunca são somadas. Recuperação espera a Home e nenhum anúncio ativo.
+- Desconectar não apaga progresso local nem backups. Tokens ficam apenas na memória. Consentimento revogado ou conta removida exigem entrar novamente; o jogo local continua disponível.
+- Os backups ficam na pasta privada do app, não na lista normal de arquivos do Drive. Cópias antigas são mantidas e backups da versão manual são reconhecidos.
 - Fireball, Magic e continuação usam anúncio recompensado. Fechar sem concluir, falha de rede ou consentimento indisponível não concede prêmio.
 - O navegador mantém o jogo local e deixa login/ads nativos indisponíveis.
 
@@ -32,13 +34,19 @@ Referências: [configuração do plugin](https://www.npmjs.com/package/@capaweso
 ## 2. Testar o backup
 
 1. Na Home, abra **Progresso e ajustes** e toque em **Entrar com Google**.
-2. Autorize o backup, confira a conta e toque em **Salvar backup**.
-3. Em outra instalação com a mesma configuração OAuth, entre na mesma conta e toque em **Restaurar backup**.
-4. Confira moedas e os três níveis apresentados e confirme a restauração.
-5. Verifique que uma cartela nova é gerada no nível restaurado e que nenhum saldo é somado ou duplicado.
-6. Teste cancelamento do login, ausência de internet, sessão expirada e troca de conta. Uma falha não deve substituir o progresso local.
+2. Autorize o backup e aguarde **Seu progresso está salvo no Google**. Não há botão de salvar.
+3. Compre um poder, receba moedas e avance um nível. Feche/reabra e confira o saldo e os níveis; o seletor Google não deve reaparecer com autorização válida.
+4. Em outra instalação com a mesma configuração OAuth, entre na mesma conta. Com progresso inicial, a recuperação deve acontecer automaticamente; confira moedas e os três níveis.
+5. Jogue sem internet, feche/reabra e reconecte. Confira o saldo local e o envio pendente; nenhum saldo pode ser somado ou duplicado.
+6. Altere o progresso offline em dois aparelhos. Reconecte ambos e verifique a escolha explícita de progresso, preservando ambas as cópias até a escolha.
+7. Teste cancelamento do login, sessão expirada, revogação de acesso, conta removida e troca de conta. Uma falha não deve substituir o progresso local.
+8. Teste encerramento forçado logo após compra, crédito da roleta e avanço de nível, além de pouco espaço disponível. Confira recuperação local e indicação de falha de salvamento.
 
-O login sozinho não transfere progresso nem salva automaticamente. O progresso local pertence à instalação; salvar após trocar de conta grava esse progresso na nova conta explicitamente escolhida.
+No uso normal, basta abrir e jogar depois da primeira autorização. Uma instalação sem internet usa o progresso local e tenta sincronizar depois. A cartela em andamento recomeça; o nível e as moedas permanecem.
+
+O sistema não depende de um evento de saída para salvar. Não há garantia absoluta contra encerramento durante uma gravação, remoção dos dados do app ou defeito no aparelho. A cópia em nuvem depende de internet e autorização válidas; pendências permanecem locais até um envio bem-sucedido. Falha de leitura local bloqueia o início para evitar substituir dados por valores iniciais.
+
+O plugin local `DriveSessionPlugin` usa AuthorizationClient para retomar a autorização anterior e renovar tokens rejeitados. Alterações nativas exigem compilar e reinstalar o Android, além de sincronizar assets. Referência: [autorização Android](https://developer.android.com/identity/authorization).
 
 ## 3. Anúncios de teste
 

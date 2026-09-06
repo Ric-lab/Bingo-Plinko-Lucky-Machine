@@ -21,6 +21,7 @@ import LuckySpin from './components/LuckySpin';
 import CloudBackup from './components/CloudBackup';
 import { useRewardedAd } from './hooks/useRewardedAd';
 import { adsAvailable } from './services/rewardedAds';
+import { useAutomaticProgress } from './hooks/useAutomaticProgress';
 
 export default function App() {
   const { busy: adBusy, watch } = useRewardedAd();
@@ -40,22 +41,31 @@ export default function App() {
         setAudioSettings(prev => ({ ...prev, ...saved }));
       }
       audioHydratedRef.current = true;
-    });
+    }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
     if (!audioHydratedRef.current) return;
-    saveJSON(AUDIO_STORAGE_KEY, audioSettings);
+    saveJSON(AUDIO_STORAGE_KEY, audioSettings).catch(() => {});
   }, [audioSettings]);
 
   const [gameStarted, setGameStarted] = useState(false);
   const [gameMode, setGameMode] = useState('FINGO');
 
   const {
-    state: { coins, balls, level, levels, isReady, bingoCard, slotsResult, winState, winReward, phase, fireBallActive, magicActive, luckySpinReward },
+    state: { coins, balls, level, levels, isReady, storageError, bingoCard, slotsResult, winState, winReward, phase, fireBallActive, magicActive, luckySpinReward },
     actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, claimLuckySpinReward, completeLuckySpin, restoreProgress }
   } = useGameLogic(gameMode);
+  const progress = useMemo(() => ({ coins, levels }), [coins, levels]);
+  const cloud = useAutomaticProgress({
+    progress, ready: isReady, canRestore: !gameStarted && !adBusy,
+    apply: value => {
+      if (gameStarted || adBusy) throw new Error('Aguarde a volta ao início.');
+      restoreProgress(value);
+      setCanvasGeneration(count => count + 1);
+    },
+  });
 
   // Target columns that have useful (unmarked matching) numbers or magic mode active
   const goldenCols = useMemo(() => {
@@ -350,13 +360,7 @@ export default function App() {
         settings={audioSettings}
         onUpdateSettings={setAudioSettings}
       >
-        <CloudBackup progress={isReady ? { coins, levels } : null}
-          canRestore={isReady && !gameStarted && !adBusy}
-          onRestore={progress => {
-            if (gameStarted || !isReady || adBusy) throw new Error('Volte ao início para restaurar.');
-            restoreProgress(progress);
-            setCanvasGeneration(value => value + 1);
-          }} />
+        <CloudBackup cloud={cloud} canRestore={!gameStarted && !adBusy} progress={progress} />
       </SideMenu>
 
       {/* Bingo Card (Compact: 85% width) */}
@@ -483,7 +487,8 @@ export default function App() {
         />
       )}
       {adBusy && <div className="absolute inset-0 z-[200] bg-black/80 text-white flex items-center justify-center" role="status">Aguarde o anúncio…</div>}
-      {!isReady && <div className="absolute inset-0 z-[200] bg-black/80 text-white flex items-center justify-center" role="status">Carregando progresso…</div>}
+      {storageError && <p role="alert" className="absolute bottom-0 inset-x-0 z-[210] bg-red-900 text-white p-3 text-sm">Não foi possível confirmar o salvamento. Libere espaço no aparelho. { !isReady && <button onClick={() => window.location.reload()}>Tentar novamente</button>}</p>}
+      {(!isReady || cloud.booting || cloud.status === 'connecting' || cloud.status === 'restoring') && <div className="absolute inset-0 z-[200] bg-black/80 text-white flex items-center justify-center" role="status">Carregando progresso…</div>}
     </div>
   );
 }

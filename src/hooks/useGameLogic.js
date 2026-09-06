@@ -118,25 +118,31 @@ export function useGameLogic(gameMode = 'FINGO') {
     // Hydrate from device storage on first mount, then persist on changes.
     const hydratedRef = useRef(false);
     const [isReady, setIsReady] = useState(false);
+    const [storageError, setStorageError] = useState(false);
     useEffect(() => {
         let cancelled = false;
         loadJSON(STORAGE_KEY).then(saved => {
             if (cancelled) return;
             if (saved) {
-                if (typeof saved.coins === 'number') setCoins(saved.coins);
-                if (saved.levels) {
-                    setLevels(prev => ({ ...prev, ...saved.levels }));
-                }
+                const progress = validateProgress(saved);
+                setCoins(progress.coins);
+                setLevels(progress.levels);
             }
             hydratedRef.current = true;
             setIsReady(true);
-        });
+        }).catch(() => { if (!cancelled) setStorageError(true); });
         return () => { cancelled = true; };
     }, []);
 
     useEffect(() => {
         if (!hydratedRef.current) return;
-        saveJSON(STORAGE_KEY, { coins, levels });
+        let cancelled = false;
+        const persist = () => saveJSON(STORAGE_KEY, { coins, levels })
+            .then(() => { if (!cancelled) setStorageError(false); })
+            .catch(() => { if (!cancelled) setStorageError(true); });
+        persist();
+        const retry = setInterval(persist, 15000);
+        return () => { cancelled = true; clearInterval(retry); };
     }, [coins, levels, isReady]);
 
     // Derived current level
@@ -499,6 +505,7 @@ export function useGameLogic(gameMode = 'FINGO') {
         state: {
             levels,
             isReady,
+            storageError,
             coins,
             balls,
             level: currentLevel, // Expose only current level
