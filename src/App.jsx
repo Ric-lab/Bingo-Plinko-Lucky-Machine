@@ -89,50 +89,59 @@ export default function App() {
   const { play: playBingo } = useSound(getImmutableSound('BINGO!.mp3'), { volume: 0.2 * audioSettings.sfx });
   const { play: playPalheta } = useSound(getImmutableSound('palheta.mp3'), { volume: 0.7 * audioSettings.sfx });
 
-  // Manage Background Music based on Game Phase and Home Screen
+  // 1. Manage Home Screen Theme Music
   useEffect(() => {
-    // If on Home Screen, play Theme and stop Game Music
     if (!gameStarted) {
-      if (audioSettings.music > 0) {
-        playTheme();
-      }
       stopBGM();
 
-      // Fallback for autoplay policy on Home Screen
-      const handleHomeInteraction = () => {
-        // Retry playing
+      if (audioSettings.music > 0) {
+        // Attempt immediate playback
         playTheme();
-        window.removeEventListener('click', handleHomeInteraction);
-      };
-      window.addEventListener('click', handleHomeInteraction);
-      return () => {
-        window.removeEventListener('click', handleHomeInteraction);
-        stopTheme(); // Ensure theme stops when effect re-runs or unmounts
-      };
+
+        // Autoplay policy fallback: unlock immediately on ANY user gesture anywhere on screen
+        const unlockEvents = ['pointerdown', 'touchstart', 'mousedown', 'keydown', 'click'];
+        const handleUnlock = () => {
+          if (!gameStarted && audioSettings.music > 0) {
+            playTheme();
+          }
+        };
+
+        unlockEvents.forEach(evt => window.addEventListener(evt, handleUnlock, { capture: true, passive: true }));
+        return () => {
+          unlockEvents.forEach(evt => window.removeEventListener(evt, handleUnlock, { capture: true }));
+        };
+      } else {
+        stopTheme();
+      }
+    } else {
+      // When leaving home screen, ensure theme is stopped
+      stopTheme();
     }
+  }, [gameStarted, audioSettings.music, playTheme, stopTheme, stopBGM]);
 
-    // GAME LOOP MUSIC
-    // There is no 'PLAYING' phase. The active phases are 'SPIN', 'SPINNING', 'DROP', 'RESOLVE'.
+  // 2. Manage In-Game BGM
+  useEffect(() => {
+    if (!gameStarted) return;
+
     const isGameActive = (phase !== 'GAME_OVER' && phase !== 'VICTORY');
-
-    if (isGameActive && gameStarted) {
-      stopTheme(); // Ensure Theme is stopped
+    if (isGameActive && audioSettings.music > 0) {
       playBGM();
 
-      // FALLBACK: If autoplay blocked, try again on first interaction
-      const handleInteraction = () => {
-        playBGM();
-        // Remove self after success (or attempt)
-        window.removeEventListener('click', handleInteraction);
+      // Autoplay fallback for in-game if blocked
+      const unlockEvents = ['pointerdown', 'touchstart', 'mousedown', 'keydown', 'click'];
+      const handleGameUnlock = () => {
+        if (isGameActive && audioSettings.music > 0) {
+          playBGM();
+        }
       };
-      window.addEventListener('click', handleInteraction);
-      return () => window.removeEventListener('click', handleInteraction);
-
+      unlockEvents.forEach(evt => window.addEventListener(evt, handleGameUnlock, { capture: true, passive: true }));
+      return () => {
+        unlockEvents.forEach(evt => window.removeEventListener(evt, handleGameUnlock, { capture: true }));
+      };
     } else {
       stopBGM();
-      if (gameStarted) stopTheme(); // Double confirm
     }
-  }, [phase, gameStarted, playBGM, stopBGM, playTheme, stopTheme, audioSettings.music]);
+  }, [gameStarted, phase, audioSettings.music, playBGM, stopBGM]);
 
   // Manage Spin Sound
   useEffect(() => {

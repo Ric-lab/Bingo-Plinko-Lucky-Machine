@@ -69,8 +69,9 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
             }
         } else {
             // Single track
-            if (opts.loop && !audioRef.current.paused && audioRef.current.currentTime > 0) {
-                return;
+            // If already playing in loop, don't interrupt it
+            if (opts.loop && !audioRef.current.paused) {
+                return Promise.resolve();
             }
 
             if (audioRef.current.currentTime > 0 && !audioRef.current.paused) {
@@ -79,7 +80,13 @@ export function useSound(src, options = { volume: 1.0, loop: false, multi: false
             // CRITICAL: Force loop property before playing (Native Audio sometimes resets or ignores dynamic prop)
             audioRef.current.loop = opts.loop;
             audioRef.current.playbackRate = rate;
-            return audioRef.current.play();
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined && typeof playPromise.catch === 'function') {
+                playPromise.catch(() => {
+                    // Suppress unhandled rejection when browser autoplay policy blocks audio
+                });
+            }
+            return playPromise;
         }
     }, []);
 
