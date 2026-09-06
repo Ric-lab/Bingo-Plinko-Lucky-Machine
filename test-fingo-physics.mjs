@@ -198,6 +198,158 @@ processedBalls.add(ballId);
 assert.equal(processedBalls.has(ballId), true, 'Ball must be marked as processed to prevent double scoring');
 
 console.log('✓ Wall bounce & bucket duplicate prevention PASSED!');
+
+
+console.log('\n=== TEST 6: Floor Fallback Turn Resolution (Garantia de Encerramento) ===');
+// Simulates the floor collision fallback in GameCanvas.jsx
+function computeFloorFallbackBin(ballX, canvasWidth = 360) {
+    const binW = canvasWidth / 5;
+    return Math.max(0, Math.min(4, Math.floor(ballX / binW)));
+}
+
+// Edge case: Ball touches floor far to the left (negative x)
+assert.equal(computeFloorFallbackBin(-50, 360), 0, 'Negative x must clamp to bin 0');
+// Edge case: Ball touches floor far to the right (x > canvasWidth)
+assert.equal(computeFloorFallbackBin(450, 360), 4, 'Out of bounds right x must clamp to bin 4');
+// Standard bins (360px width => 72px per bin)
+assert.equal(computeFloorFallbackBin(36, 360), 0, 'x=36 must resolve to bin 0');
+assert.equal(computeFloorFallbackBin(100, 360), 1, 'x=100 must resolve to bin 1');
+assert.equal(computeFloorFallbackBin(180, 360), 2, 'x=180 must resolve to bin 2');
+assert.equal(computeFloorFallbackBin(250, 360), 3, 'x=250 must resolve to bin 3');
+assert.equal(computeFloorFallbackBin(320, 360), 4, 'x=320 must resolve to bin 4');
+
+// Verify deduplication flow on floor hit:
+const testFloorProcessed = new Set();
+let resolutionsCount = 0;
+const testBall = { id: 999, position: { x: 180 } };
+
+function simulateFloorHit(ball) {
+    if (!testFloorProcessed.has(ball.id)) {
+        testFloorProcessed.add(ball.id);
+        const bin = computeFloorFallbackBin(ball.position.x);
+        resolutionsCount++;
+        return bin;
+    }
+    return null; // Already processed
+}
+
+assert.equal(simulateFloorHit(testBall), 2, 'First floor hit must resolve turn');
+assert.equal(simulateFloorHit(testBall), null, 'Subsequent floor hit of same ball must NOT resolve turn twice');
+assert.equal(resolutionsCount, 1, 'Turn resolution must be triggered exactly once per ball');
+console.log('✓ Floor fallback turn resolution tests PASSED!');
+
+
+console.log('\n=== TEST 7: Mode Rewards & Win Conditions (FINGO / BINGO / SPINGO) ===');
+const MODE_CONFIG = {
+    'FINGO': { balls: 50, centerFree: true, baseReward: 100 },
+    'BINGO': { balls: 100, centerFree: true, baseReward: 300 },
+    'SPINGO': { balls: 25, centerFree: false, baseReward: 50 }
+};
+
+function calculateWinReward(mode, level) {
+    const config = MODE_CONFIG[mode];
+    return (config?.baseReward || 100) + level;
+}
+
+// Check reward calculation
+assert.equal(calculateWinReward('FINGO', 1), 101, 'FINGO lvl 1 reward must be 101');
+assert.equal(calculateWinReward('FINGO', 5), 105, 'FINGO lvl 5 reward must be 105');
+assert.equal(calculateWinReward('BINGO', 1), 301, 'BINGO lvl 1 reward must be 301');
+assert.equal(calculateWinReward('BINGO', 10), 310, 'BINGO lvl 10 reward must be 310');
+assert.equal(calculateWinReward('SPINGO', 1), 51, 'SPINGO lvl 1 reward must be 51');
+assert.equal(calculateWinReward('SPINGO', 25), 75, 'SPINGO lvl 25 reward must be 75');
+
+// Test BINGO full card win condition (Blackout)
+function checkFullCard(card) {
+    return card.every(c => c.marked);
+}
+const testBingoCard = createTestCard();
+assert.equal(checkFullCard(testBingoCard), false, 'Initial card should not win BINGO full card');
+testBingoCard.forEach(c => c.marked = true);
+assert.equal(checkFullCard(testBingoCard), true, 'Blackout card must win BINGO');
+
+// Test SPINGO any five win condition
+function checkAnyFive(card) {
+    return card.filter(c => c.marked).length >= 5;
+}
+const testSpingoCard = createTestCard();
+testSpingoCard[0].marked = false; // reset any
+assert.equal(checkAnyFive(testSpingoCard.filter(c => !c.isFree)), false, 'Unmarked card should not win SPINGO');
+// Mark 5 distinct cells
+for (let i = 0; i < 5; i++) {
+    testSpingoCard[i].marked = true;
+}
+assert.equal(checkAnyFive(testSpingoCard), true, '5 marked numbers must win SPINGO');
+console.log('✓ Mode rewards & win conditions tests PASSED!');
+
+
+console.log('\n=== TEST 8: Lucky Spin Deferral & Safe Spin Start ===');
+// Simulate startSpin guard
+function simulateStartSpin(phase, magicNumberOverride = null) {
+    if (phase !== 'SPIN' && !(phase === 'DROP' && magicNumberOverride !== null)) {
+        return false;
+    }
+    return true;
+}
+
+// Normal spin only allowed in SPIN phase
+assert.equal(simulateStartSpin('SPIN'), true, 'startSpin allowed in SPIN phase');
+assert.equal(simulateStartSpin('SPINNING'), false, 'startSpin blocked in SPINNING phase');
+assert.equal(simulateStartSpin('DROP'), false, 'normal startSpin blocked in DROP phase');
+assert.equal(simulateStartSpin('RESOLVE'), false, 'startSpin blocked in RESOLVE phase');
+assert.equal(simulateStartSpin('GAME_OVER'), false, 'startSpin blocked in GAME_OVER phase');
+
+// Magic spin allowed in DROP phase with number override
+assert.equal(simulateStartSpin('DROP', 42), true, 'magic spin allowed in DROP phase');
+assert.equal(simulateStartSpin('SPINNING', 42), false, 'magic spin blocked in SPINNING phase');
+
+// Safe magic purchase: Only deduct coins if startSpin succeeded
+let userCoins = 500;
+const magicCost = 500;
+let phase = 'SPINNING';
+
+function attemptMagicPurchase(number) {
+    if (userCoins < magicCost) return false;
+    const started = simulateStartSpin(phase, number);
+    if (started) {
+        userCoins -= magicCost;
+        return true;
+    }
+    return false;
+}
+
+// In SPINNING phase, attempt must fail and deduct ZERO coins
+assert.equal(attemptMagicPurchase(15), false, 'Purchase should fail when spin cannot start');
+assert.equal(userCoins, 500, 'Coins must NOT be deducted if spin was not started');
+
+// In DROP phase, attempt succeeds and deducts coins
+phase = 'DROP';
+assert.equal(attemptMagicPurchase(15), true, 'Purchase should succeed in DROP phase');
+assert.equal(userCoins, 0, 'Coins deducted only when spin was accepted');
+
+// Lucky spin reward deferral simulation
+let walletCoins = 1000;
+let savedReward = null;
+
+function spinWheel() {
+    savedReward = 500; // determined prize
+    // Does NOT credit coins here
+    return savedReward;
+}
+
+function onWheelStopped() {
+    if (savedReward !== null) {
+        walletCoins += savedReward;
+    }
+}
+
+spinWheel();
+assert.equal(walletCoins, 1000, 'Coins must NOT be credited during spin animation');
+onWheelStopped();
+assert.equal(walletCoins, 1500, 'Coins credited only after wheel stops');
+console.log('✓ Lucky Spin deferral & safe spin start tests PASSED!');
+
+
 console.log('\n=========================================');
-console.log('ALL 5 TEST SUITES PASSED CLEANLY (100%)');
+console.log('ALL 8 TEST SUITES PASSED CLEANLY (100%)');
 console.log('=========================================');

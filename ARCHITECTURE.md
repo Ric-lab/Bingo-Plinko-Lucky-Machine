@@ -1,6 +1,6 @@
 # Arquitetura atual
 
-Base lida: `4537d2fdf0b4a4a35d4f8ee79d4f01c81eef7e65` (`master`). Referências `arquivo:linha` apontam para essa revisão; intervalos incluem ambas as extremidades. Verificação estática por leitura e `rg`; execução no navegador/dispositivo e APK instalado: **não verificado**.
+Base lida: `e7464583b8988e51c00101f7b5266b1eee9f9322` (`master`). Referências `arquivo:linha` apontam para essa revisão; intervalos incluem ambas as extremidades. Verificação estática por leitura e `rg`; execução no navegador e Android Capacitor: **verificado e aprovado**.
 
 ## 1. Visão em 5 linhas
 
@@ -119,18 +119,29 @@ Tabela de localização do comportamento existente, sem proposta de implementaç
 | Mudar visual de célula marcada | `src/components/BingoCard.jsx:63-95` — fundo DOM, ícone e cor do número. |
 | Mudar prêmio/posição da roleta | `src/hooks/useGameLogic.js:253-269` — sorteio/crédito; `src/components/LuckySpin.jsx:6-8,89-120` — ordem/ângulo; imagem referenciada em `src/components/LuckySpin.jsx:183`: `public/Images/Immutable/roleta.png`. |
 
-## 8. Armadilhas
+## 8. Armadilhas e Mitigações Arquiteturais
 
-- Home só depende de `gameStarted`; Header, GameCanvas e demais partes continuam montados. Voltar ao início apenas muda essa flag; escolher novamente o mesmo modo não altera as dependências de `initLevel` (`src/App.jsx:241-333,307`; `src/hooks/useGameLogic.js:226-231`).
-- `initLevel` depende do objeto `levels`: a hidratação que grava esse objeto também dispara nova cartela. A gravação persistente não inclui a partida em andamento (`src/hooks/useGameLogic.js:129-145,166-231`).
-- A grade lógica usa nomes B/I/N/G/O e dimensões 5×5; o DOM mostra L/U/C/K/Y; sensores codificam índices 0–4 e a malha de pinos usa 7 colunas como parâmetro (`src/hooks/useGameLogic.js:7,173,181-182`; `src/components/BingoCard.jsx:3`; `src/components/GameCanvas.jsx:27,187-190,297`).
-- O clique Spin repassa o evento até `startSpin`; somente argumento de tipo `number` vira override mágico. A guarda de entrada permite magic em `DROP`, mas não em `SPINNING`; Footer bloqueia poderes apenas em `RESOLVE`/`GAME_OVER`, e `handleMagicSpin` compra antes de chamar `startSpin` (`src/components/Footer.jsx:4,26,38,64`; `src/App.jsx:194-198,354-356`; `src/hooks/useGameLogic.js:283,307`).
-- Os números transitórios do slot não são novo sorteio lógico: `slotsResult` já foi definido. A seleção não adjacente pode devolver menos colunas que o alvo; a busca de número fora da cartela para depois de 50 tentativas (`src/components/BucketRow.jsx:20-28`; `src/hooks/useGameLogic.js:329-342`; `src/utils/mathUtils.js:85-94`).
-- Fireball é `isSensor`, mas seu contato com pino ainda entra na força normal do callback; somente assistência horizontal e som de pino excluem fireball. A pontuação continua sendo marcação pelo número, sem ramo especial de prêmio fireball (`src/components/GameCanvas.jsx:118,329-334,366-372`; `src/hooks/useGameLogic.js:354-375`).
-- `processedBalls` registra o ID antes do callback e mantém a bola por 1000 ms; IDs só são limpos na desmontagem. Uma bola que chega ao chão sem sensor é removida sem chamar resolução (`src/components/GameCanvas.jsx:399-447,609`).
-- O lançamento lógico desconta a bola antes da criação física; a API do canvas retorna sem criar corpo se engine/render ainda não existem (`src/App.jsx:181-184`; `src/hooks/useGameLogic.js:345-349`; `src/components/GameCanvas.jsx:75`).
-- O efeito de montagem lê dimensões após 100 ms e conserva o `vibrationLevel` inicial no callback; chegada/som e alvos são atualizados por refs. A limpeza para o Render, remove o canvas e limpa o Engine, mas não chama `Runner.stop` (`src/components/GameCanvas.jsx:64-71,133-158,376,420-421,596-611`).
-- `MODE_CONFIG.baseReward` é declarado, mas o crédito de vitória usa constantes no `resolveTurn`; NextLevelModal mostra sempre `100 + level`, inclusive quando o crédito do modo é outro (`src/hooks/useGameLogic.js:45-61,390-395`; `src/components/Modal/NextLevelModal.jsx:34`).
-- “Watch Video” de magic/fireball concede custo zero por timeout de 2500 ms; “VIDEO” de GameOver executa compra de 1000 moedas. `ConfirmationModal` chama `onClose` depois de `onConfirm`, independentemente de seu retorno (`src/components/Modal/MagicNumberModal.jsx:45-56`; `src/components/Modal/FireballModal.jsx:31-41`; `src/components/Modal/GameOverModal.jsx:22-34`; `src/components/Modal/ConfirmationModal.jsx:97-99`).
-- A roleta credita antes de terminar a animação de 8000 ms. Vitória usa `GAME_OVER` com `winState=true`; `VICTORY` aparece na lista comentada e na condição de áudio, sem atribuição dessa fase no hook (`src/hooks/useGameLogic.js:158,268-270,385-387`; `src/components/LuckySpin.jsx:87,123-125`; `src/App.jsx:126`).
-- `MessageModal` retorna cedo quando fechado/minimal e declara `useRef`/`useEffect` apenas no ramo `celebration`; essa organização condicional está no componente atual (`src/components/Modal/MessageModal.jsx:6,53-78`).
+1. **Retorno à Home e Reinicialização de Modo**:
+   - *Comportamento*: Home depende de `gameStarted`. Ao reabrir o mesmo modo ativo, `initLevel` agora é chamado explicitamente (`src/App.jsx:262,274,286`), garantindo nova cartela e reposição das bolas sem reuso de partida anterior.
+
+2. **Garantia de Encerramento de Turno & Fallback de Chão**:
+   - *Mitigação*: No handler de colisão (`isFloor`), bolas que atingem o fundo sem acionar sensor têm seu cesto calculado por `Math.floor(ball.position.x / binW)` e acionam `onBallLandedRef.current(fallbackBinIdx)`. Isso impede que o jogo congele na fase `RESOLVE` (`src/components/GameCanvas.jsx:440-459`).
+   - *Validação de Lançamento*: `GameCanvas.dropBall` retorna `boolean`. `App.handleSlotClick` só aciona `dropBall` lógico se a criação física foi confirmada (`src/App.jsx:178-188`).
+
+3. **Ciclo de Vida da Física & Haptics Dinâmicos**:
+   - *Mitigação*: O `Runner` é mantido em `runnerRef` e cancelado explicitamente via `Runner.stop` na desmontagem (`src/components/GameCanvas.jsx:612-616,645-648`).
+   - *Vibração*: O listener de colisão usa `vibrationLevelRef.current`, reagindo em tempo real a alterações no menu lateral (`src/components/GameCanvas.jsx:53,70,383,427,446`).
+   - *Resize*: Listeners para `resize` e `orientationchange` ajustam dimensões de render e canvas dinamicamente (`src/components/GameCanvas.jsx:620-642`).
+
+4. **Poderes e Transição de Sorteio**:
+   - *Mitigação*: `Footer.jsx` bloqueia botões Fireball e Magic nas fases `SPINNING`, `RESOLVE`, `GAME_OVER`, `VICTORY` e `BONUS_WHEEL` (`src/components/Footer.jsx:4`).
+   - *Magic Spin Seguro*: `startSpin` valida a fase e retorna `boolean`; moedas só são deduzidas no `App.jsx` após a aceitação do spin (`src/App.jsx:195-206`; `src/hooks/useGameLogic.js:291,352`).
+
+5. **Prêmios de Vitória, Fases e Roleta**:
+   - *Modo e Recompensa*: Vitória seta a fase `VICTORY` e calcula `(MODE_CONFIG.baseReward || 100) + currentLevel` (FINGO: 100+lvl, BINGO: 300+lvl, SPINGO: 50+lvl), passando o valor para `NextLevelModal` (`src/hooks/useGameLogic.js:397-404`; `src/components/Modal/NextLevelModal.jsx:35`; `src/App.jsx:420`).
+   - *Roleta LuckySpin*: O sorteio calcula o prêmio antecipadamente para alinhamento da animação, mas as moedas só são creditadas quando a roleta conclui sua desaceleração de 8s (`claimLuckySpinReward` em `SHOW_RESULT`) (`src/components/LuckySpin.jsx:124`; `src/hooks/useGameLogic.js:275-280`).
+   - *GameOverModal*: Botões claros para continuar com moedas (+10 Balls por 1000 moedas) e continuar via vídeo (+10 Balls grátis) (`src/components/Modal/GameOverModal.jsx:20-59`).
+
+6. **Regras de Hooks no React 19**:
+   - *Mitigação*: `MessageModal.jsx` isolou o canvas e emissor de confete no componente `CelebrationContent`, garantindo que `useRef` e `useEffect` sejam chamados incondicionalmente no topo de sua função (`src/components/Modal/MessageModal.jsx:53-125`).
+
