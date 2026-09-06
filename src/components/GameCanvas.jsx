@@ -1,5 +1,6 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import Matter from 'matter-js';
+import { incrementSessionDropCount, getSessionAssistFactor } from '../utils/sessionPhysics';
 
 const { Engine, Render, Runner, Bodies, Body, Composite, Events, Vector } = Matter;
 
@@ -22,6 +23,7 @@ const PHYSICS_CONFIG = {
     PEG_RESTITUTION_LARGE: 0.9,     // bouncy but loses energy
     PEG_RESTITUTION_SMALL: 1.0,     // perfect bounce (was 1.5 — amplified energy → crazy bouncing)
     PEG_ACTIVE_FORCE: 0.05,         // extra kick on hit (creates "relevant" direction change)
+    PEG_STEER_NUDGE: 0.006,         // subtle progressive horizontal bias vector towards target buckets
     PEG_COLS: 7,                    // horizontal density
 
     // --- Rows are computed dynamically — target this row-gap relative to ball ---
@@ -38,7 +40,7 @@ const PHYSICS_CONFIG = {
     GRAVITY_Y: 1.2,
 };
 
-const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, getImage }, ref) => {
+const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, getImage, goldenCols = [] }, ref) => {
     const sceneRef = useRef(null);
     const engineRef = useRef(null);
     const renderRef = useRef(null);
@@ -47,6 +49,9 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
 
     // Fix Stale Closure: Keep track of the latest callback
     const onBallLandedRef = useRef(onBallLanded);
+
+    // Dynamic targets for subtle peg steering without restarting physics engine
+    const goldenColsRef = useRef(goldenCols);
 
     // Audio & Visual Refs
     // const { play: playHit } = useSound('/Audio/peg.mp3', { volume: 1.0, multi: true }); // Moved to App.jsx
@@ -60,6 +65,10 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
         onBallLandedRef.current = onBallLanded;
         playHitRef.current = onPegHit;
     }, [onBallLanded, onPegHit]);
+
+    useEffect(() => {
+        goldenColsRef.current = goldenCols;
+    }, [goldenCols]);
 
     useImperativeHandle(ref, () => ({
         dropBall: (colIdx, isFireBall = false) => {
@@ -111,6 +120,7 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
 
             // Random slight x velocity (chaos) ONLY IF NOT FIREBALL — prevents straight fall
             if (!isFireBall) {
+                incrementSessionDropCount();
                 Matter.Body.setVelocity(ball, { x: (Math.random() - 0.5) * PHYSICS_CONFIG.BALL_INITIAL_X_CHAOS, y: 0 });
             } else {
                 Matter.Body.setVelocity(ball, { x: 0, y: 5 }); // Push it down
@@ -319,6 +329,40 @@ const GameCanvas = forwardRef(({ onBallLanded, onPegHit, vibrationLevel = 1, get
                     if (ball && peg) {
                         const normal = Vector.normalise(Vector.sub(ball.position, peg.position));
                         const force = Vector.mult(normal, PHYSICS_CONFIG.PEG_ACTIVE_FORCE);
+
+                        // SUBTLE PROGRESSIVE NUDGE TOWARDS GOLDEN TARGETS (Imperceptible to player)
+                        if (ball.label === 'player-ball') {
+                            const activeTargets = goldenColsRef.current;
+                            if (activeTargets && activeTargets.length > 0) {
+                                const width = renderRef.current?.options?.width || sceneRef.current?.clientWidth || 360;
+                                const binW = width / 5;
+
+                                let bestTargetX = null;
+                                let minDist = Infinity;
+
+                                for (let i = 0; i < activeTargets.length; i++) {
+                                    const colIdx = activeTargets[i];
+                                    const colCenterX = (colIdx + 0.5) * binW;
+                                    const dist = Math.abs(colCenterX - ball.position.x);
+                                    if (dist < minDist) {
+                                        minDist = dist;
+                                        bestTargetX = colCenterX;
+                                    }
+                                }
+
+                                if (bestTargetX !== null) {
+                                    const diffX = bestTargetX - ball.position.x;
+                                    // Only nudge if not already directly centered above the target bucket
+                                    if (Math.abs(diffX) > 6) {
+                                        const dirX = Math.sign(diffX);
+                                        const assist = getSessionAssistFactor();
+                                        const nudge = dirX * PHYSICS_CONFIG.PEG_STEER_NUDGE * assist;
+                                        force.x += nudge;
+                                    }
+                                }
+                            }
+                        }
+
                         Body.applyForce(ball, ball.position, force);
 
                         // --- FEEDBACK SECTION ---

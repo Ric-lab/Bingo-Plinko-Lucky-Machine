@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import Header from './components/Header';
 import BingoCard from './components/BingoCard';
 import GameCanvas from './components/GameCanvas';
@@ -51,6 +51,20 @@ export default function App() {
     state: { coins, balls, level, bingoCard, slotsResult, winState, phase, fireBallActive, magicActive, luckySpinReward },
     actions: { initLevel, startSpin, dropBall, resolveTurn, buyItem, nextLevel, spinLuckySpin, completeLuckySpin }
   } = useGameLogic(gameMode);
+
+  // Target columns that have useful (unmarked matching) numbers or magic mode active
+  const goldenCols = useMemo(() => {
+    if (magicActive) return [0, 1, 2, 3, 4];
+    if (!slotsResult || !bingoCard) return [];
+    const cols = [];
+    slotsResult.forEach((num, idx) => {
+      const cell = bingoCard.find(c => c.num === num);
+      if (cell && !cell.marked) {
+        cols.push(idx);
+      }
+    });
+    return cols;
+  }, [slotsResult, bingoCard, magicActive]);
 
   const {
     getImage,
@@ -306,6 +320,7 @@ export default function App() {
             onPegHit={playPeg}
             vibrationLevel={audioSettings.vibration}
             getImage={getImage}
+            goldenCols={goldenCols}
           />
         </div>
 
