@@ -34,7 +34,7 @@ Use `[x]` para tarefas concluídas e mantenha `[ ]` enquanto faltar qualquer par
 
 ## Depende da aprovação da Play Console
 
-- [ ] Confirmar que a verificação da conta de desenvolvedor foi aprovada.
+- [x] Confirmar que a verificação da conta de desenvolvedor foi aprovada.
 - [ ] Criar o aplicativo na Play Console com o pacote definitivo `com.bingoplinko.game`.
 - [ ] Ativar o Google Play App Signing.
 - [ ] Obter o SHA-1 do certificado de assinatura da Play.
