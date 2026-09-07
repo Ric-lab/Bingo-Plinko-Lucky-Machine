@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, HelpCircle, Music, Volume2, Smartphone, Home } from 'lucide-react';
 
-export default function SideMenu({ isOpen, onClose, onGoHome, settings, onUpdateSettings }) {
+export default function SideMenu({ isOpen, onClose, onGoHome, settings, onUpdateSettings, children }) {
 
     const toggleSetting = (key) => {
         onUpdateSettings(prev => {
@@ -24,14 +24,16 @@ export default function SideMenu({ isOpen, onClose, onGoHome, settings, onUpdate
         <>
             {/* Backdrop */}
             <div
-                className={`absolute inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                className={`absolute inset-0 bg-black/50 backdrop-blur-sm z-[65] transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                     }`}
                 onClick={onClose}
             />
 
             {/* Menu Drawer */}
             <div
-                className={`absolute top-0 right-0 h-full w-[280px] bg-white z-50 shadow-2xl transform transition-transform duration-300 ease-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'
+                inert={!isOpen}
+                aria-hidden={!isOpen}
+                className={`absolute top-0 right-0 h-full w-[280px] bg-white z-[70] shadow-2xl transform transition-transform duration-300 ease-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'
                     }`}
             >
                 {/* Header */}
@@ -75,6 +77,7 @@ export default function SideMenu({ isOpen, onClose, onGoHome, settings, onUpdate
 
                     <div className="my-2 border-t border-gray-100" />
 
+                    {children}
                     {/* Navigation */}
                     <nav className="flex flex-col gap-1 px-2">
                         <MenuItem icon={<Home size={20} />} label="Voltar ao Início" onClick={() => { onClose(); onGoHome?.(); }} />

@@ -4,6 +4,8 @@ export default function GameOverModal({
     coins,
     onRestart,
     buyItem,
+    watchReward,
+    adsAvailable,
     showMessage,
     playClick
 }) {
@@ -43,11 +45,9 @@ export default function GameOverModal({
                 <button
                     onClick={() => {
                         playClick?.();
-                        showMessage('info', 'Watching Ad...', 'Please wait 2 seconds...', 2000);
-                        setTimeout(() => {
-                            buyItem('continue', 0);
-                        }, 2500);
+                        watchReward('continue');
                     }}
+                    disabled={!adsAvailable}
                     className="group relative px-6 py-2.5 rounded-full font-black text-lg shadow-xl transition-all border-4 border-white/30 bg-gradient-to-b from-emerald-500 to-emerald-700 hover:from-emerald-400 hover:to-emerald-600 cursor-pointer shadow-[0_4px_0_rgb(4,120,87)] active:translate-y-[4px] active:shadow-none"
                 >
                     <span className="drop-shadow-md flex items-center justify-center gap-2 text-white">

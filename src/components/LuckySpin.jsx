@@ -128,7 +128,10 @@ export default function LuckySpin({ spinLuckySpin, claimLuckySpinReward, complet
         <div className="absolute inset-0 z-[100] bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 flex flex-col items-center justify-center p-0 text-white overflow-hidden">
 
             {/* Background Effects */}
-            <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] animate-pulse" />
+            <div
+                className="absolute inset-0 opacity-20 animate-pulse"
+                style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.85) 1px, transparent 1.5px)', backgroundSize: '18px 18px' }}
+            />
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/30 to-transparent pointer-events-none" />
 
             <div className="relative z-10 flex flex-col items-center max-w-md w-full gap-8">

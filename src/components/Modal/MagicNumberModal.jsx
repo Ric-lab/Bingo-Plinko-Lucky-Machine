@@ -7,6 +7,8 @@ export default function MagicNumberModal({
     onClose,
     coins,        // To check affordance
     onMagicSpin,  // Callback when a number is successfully chosen (paid or free)
+    watchReward,
+    adsAvailable,
     showMessage,  // For feedback
     bingoCard,
     playClick
@@ -42,18 +44,10 @@ export default function MagicNumberModal({
         }
     };
 
-    const handleWatchVideo = () => {
+    const handleWatchVideo = async () => {
         playClick?.();
         if (!selectedNumber) return;
-
-        // Simulated Video
-        showMessage('info', 'Watching Ad...', 'Please wait 2 seconds...', 2000);
-        setTimeout(() => {
-            // Free cost
-            onMagicSpin(selectedNumber, 0);
-            // Show Reward Modal instead of closing immediately
-            setShowReward(true);
-        }, 2500);
+        if (await watchReward('magic', selectedNumber)) setShowReward(true);
     };
 
     const handleCloseReward = () => {
@@ -125,7 +119,7 @@ export default function MagicNumberModal({
                 <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-3">
                     <button
                         onClick={handleWatchVideo}
-                        disabled={!selectedNumber}
+                        disabled={!selectedNumber || !adsAvailable}
                         className={`
                             w-full py-3 rounded-xl font-bold text-white bg-blue-500 shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-2
                             ${!selectedNumber ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}

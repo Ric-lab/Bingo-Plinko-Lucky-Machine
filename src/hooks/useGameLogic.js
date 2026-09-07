@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { calculateProbabilities, pickNonAdjacentColumns } from '../utils/mathUtils.js';
 import { loadJSON, saveJSON } from '../utils/storage.js';
+import { validateProgress } from '../utils/progress.js';
 
 const STORAGE_KEY = 'bplm.gameLogic.v1';
 
@@ -116,25 +117,33 @@ export function useGameLogic(gameMode = 'FINGO') {
 
     // Hydrate from device storage on first mount, then persist on changes.
     const hydratedRef = useRef(false);
+    const [isReady, setIsReady] = useState(false);
+    const [storageError, setStorageError] = useState(false);
     useEffect(() => {
         let cancelled = false;
         loadJSON(STORAGE_KEY).then(saved => {
             if (cancelled) return;
             if (saved) {
-                if (typeof saved.coins === 'number') setCoins(saved.coins);
-                if (saved.levels) {
-                    setLevels(prev => ({ ...prev, ...saved.levels }));
-                }
+                const progress = validateProgress(saved);
+                setCoins(progress.coins);
+                setLevels(progress.levels);
             }
             hydratedRef.current = true;
-        });
+            setIsReady(true);
+        }).catch(() => { if (!cancelled) setStorageError(true); });
         return () => { cancelled = true; };
     }, []);
 
     useEffect(() => {
         if (!hydratedRef.current) return;
-        saveJSON(STORAGE_KEY, { coins, levels });
-    }, [coins, levels]);
+        let cancelled = false;
+        const persist = () => saveJSON(STORAGE_KEY, { coins, levels })
+            .then(() => { if (!cancelled) setStorageError(false); })
+            .catch(() => { if (!cancelled) setStorageError(true); });
+        persist();
+        const retry = setInterval(persist, 15000);
+        return () => { cancelled = true; clearInterval(retry); };
+    }, [coins, levels, isReady]);
 
     // Derived current level
     const currentLevel = levels[gameMode || 'FINGO'];
@@ -317,6 +326,15 @@ export function useGameLogic(gameMode = 'FINGO') {
         }));
     };
 
+    const restoreProgress = (value) => {
+        const progress = validateProgress(value);
+        clearAllTimers();
+        pendingLuckyRewardRef.current = null;
+        setLuckySpinReward(null);
+        setCoins(progress.coins);
+        setLevels(progress.levels);
+    };
+
     const startSpin = (magicNumberOverride = null) => {
         if (phase !== 'SPIN' && !(phase === 'DROP' && magicNumberOverride !== null)) return false;
 
@@ -485,6 +503,9 @@ export function useGameLogic(gameMode = 'FINGO') {
 
     return {
         state: {
+            levels,
+            isReady,
+            storageError,
             coins,
             balls,
             level: currentLevel, // Expose only current level
@@ -499,6 +520,7 @@ export function useGameLogic(gameMode = 'FINGO') {
             luckySpinReward
         },
         actions: {
+            restoreProgress,
             initLevel,
             startSpin,
             dropBall,
