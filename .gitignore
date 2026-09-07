@@ -28,3 +28,5 @@ dist-ssr
 .env
 .env.*
 !.env.example
+art-pipeline/scripts/__pycache__/
+*.pyc
