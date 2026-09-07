@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { rewardedAds, adPrivacyAvailable } from '../services/rewardedAds.js';
 
+const publicSite = (import.meta.env?.VITE_PUBLIC_SITE_URL?.trim() ||
+    'https://ric-lab.github.io/Bingo-Plinko-Lucky-Machine').replace(/\/$/, '');
+
 const messages = {
     local: 'Seu progresso é salvo automaticamente neste aparelho.',
     saved: 'Seu progresso está salvo no Google.',
@@ -54,6 +57,11 @@ export default function CloudBackup({ cloud, progress, canRestore }) {
                 finally { setPrivacyBusy(false); }
             }}>Privacidade dos anúncios</button>}
             {message && <p role="status" className="text-sm">{message}</p>}
+            <nav className="flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="Informações legais e suporte">
+                <a className="underline" href={`${publicSite}/privacy.html`} target="_blank" rel="noreferrer">Privacidade</a>
+                <a className="underline" href={`${publicSite}/terms.html`} target="_blank" rel="noreferrer">Termos</a>
+                <a className="underline" href={`${publicSite}/support.html`} target="_blank" rel="noreferrer">Suporte</a>
+            </nav>
         </section>
     );
 }

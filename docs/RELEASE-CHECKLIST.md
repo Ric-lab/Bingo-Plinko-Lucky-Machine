@@ -18,9 +18,9 @@ Use `[x]` para tarefas concluídas e mantenha `[ ]` enquanto faltar qualquer par
 
 ## Pode ser feito enquanto a Play Console verifica os documentos
 
-- [ ] Criar a política de privacidade do jogo.
-- [ ] Criar os termos de uso.
-- [ ] Criar uma página pública de suporte.
+- [x] Criar a política de privacidade do jogo.
+- [x] Criar os termos de uso.
+- [x] Criar uma página pública de suporte.
 - [ ] Publicar as páginas legais em endereços HTTPS permanentes.
 - [ ] Inserir os endereços públicos no branding do Google Auth Platform.
 - [ ] Confirmar que o Google permite publicar a configuração OAuth para qualquer Conta Google.
@@ -28,8 +28,8 @@ Use `[x]` para tarefas concluídas e mantenha `[ ]` enquanto faltar qualquer par
 - [ ] Cadastrar o jogo no AdMob como aplicativo ainda não publicado.
 - [ ] Criar as unidades de anúncio premiado necessárias.
 - [ ] Guardar os IDs públicos do AdMob na configuração de build, sem versionar credenciais privadas.
-- [ ] Revisar o conteúdo da branch `fix/automatic-progress-save`.
-- [ ] Executar lint, testes, build web e sincronização do Capacitor.
+- [x] Revisar o conteúdo da branch `fix/automatic-progress-save`.
+- [x] Executar lint, testes, build web e sincronização do Capacitor.
 - [ ] Integrar a branch revisada na `master`.
 
 ## Depende da aprovação da Play Console
